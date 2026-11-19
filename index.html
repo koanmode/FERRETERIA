@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/environments/RoomEnvironment.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
@@ -68,12 +69,8 @@
             outline: 2px solid #1da1f2;
             outline-offset: -2px;
         }
-        .draggable-file-card {
-            cursor: grab;
-        }
-        .draggable-file-card:active {
-            cursor: grabbing;
-        }
+        .draggable-file-card { cursor: grab; }
+        .draggable-file-card:active { cursor: grabbing; }
         #viewer-canvas-container canvas {
             display: block;
             width: 100% !important;
@@ -100,7 +97,6 @@
     </style>
 </head>
 <body id="page-drop-root" class="min-h-screen flex flex-col">
-    <!-- Indicador superior discreto al arrastrar archivos: mantiene visible toda la tabla -->
     <div id="page-drop-banner" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
         <div class="bg-[#23272c] border border-[#1da1f2] rounded px-3.5 py-1.5 shadow-xl flex items-center gap-2">
             <i class="fa-solid fa-file-arrow-down text-[#1da1f2] text-xs"></i>
@@ -108,7 +104,6 @@
         </div>
     </div>
 
-    <!-- Cuadro emergente de confirmación "Guardado" que desaparece brevemente -->
     <div id="saved-popup" class="hidden fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
         <div class="bg-[#23272c] border border-emerald-400/80 rounded px-7 py-4 shadow-2xl flex items-center gap-3">
             <span class="w-7 h-7 rounded bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-300 text-sm">
@@ -118,7 +113,6 @@
         </div>
     </div>
 
-    <!-- Barra superior estilo referencia -->
     <header class="sticky top-0 z-30 bg-[#15181c] border-b border-[#2a2f36] h-12 flex items-center justify-between px-3 sm:px-5 gap-3">
         <div class="flex items-center gap-3 min-w-0">
             <button onclick="focusFirstFilter()" title="Ir a filtros" class="text-[#c8cfd8] hover:text-white text-sm px-1.5 py-1">
@@ -168,7 +162,6 @@
     </header>
 
     <main class="flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-5 py-4 space-y-4">
-        <!-- Panel superior de filtros estilo barra de búsqueda -->
         <section class="dw-card p-3">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
                 <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#cfd5de]">
@@ -192,7 +185,6 @@
             </div>
         </section>
 
-        <!-- Panel de carga rápida / Excel (solo Admin) -->
         <section id="admin-quick-create-panel" class="hidden dw-card">
             <div class="dw-card-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">
@@ -215,11 +207,10 @@
             <div id="draft-rows-container" class="p-3 space-y-2"></div>
         </section>
 
-        <!-- Tabla principal de componentes -->
         <section class="dw-card overflow-hidden">
             <div class="dw-card-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">COMPONENTES CAD (.IPT)</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">COMPONENTES CAD (.IPT / .STL / .GLB)</span>
                     <span id="pending-changes-badge" class="hidden px-2 py-0.5 rounded bg-[#1da1f2]/20 border border-[#1da1f2]/50 text-[#69c3fa] font-mono text-[10px]">
                         0 cambio(s) pendiente(s)
                     </span>
@@ -292,21 +283,13 @@
                                 <i class="fa-solid fa-arrows-rotate"></i>
                             </button>
                         </div>
-                        <div class="px-2.5 py-1 rounded bg-[#272b30]/95 border border-[#3e454e] text-[11px] font-mono text-[#cfd5de] pointer-events-auto">
-                            <i class="fa-solid fa-microchip text-[#1da1f2] mr-1"></i> Conector .IPT
+                        <div id="render-mode-badge" class="px-2.5 py-1 rounded bg-[#272b30]/95 border border-[#3e454e] text-[11px] font-mono text-[#cfd5de] pointer-events-auto">
+                            <i class="fa-solid fa-microchip text-[#1da1f2] mr-1"></i> Visor 3D PBR
                         </div>
                     </div>
 
                     <div class="relative flex-1 w-full h-full select-none">
                         <div id="viewer-canvas-container" class="w-full h-full min-h-[380px]"></div>
-                        <div id="ipt-native-notice" class="hidden absolute inset-0 flex items-center justify-center p-6 pointer-events-none">
-                            <div class="bg-[#272b30]/95 rounded p-5 max-w-md text-center border border-[#3e454e] pointer-events-auto shadow-xl">
-                                <h4 class="text-sm font-bold text-white">Vista Directa de .ipt Requiere Servicio Paralelo</h4>
-                                <p class="text-xs text-[#aeb6c2] mt-1.5 leading-relaxed">
-                                    El archivo <strong id="notice-ipt-name" class="text-[#1da1f2] font-mono"></strong> está guardado intacto sin modificar y listo para descargar o arrastrar a tu proyecto.
-                                </p>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="px-3.5 py-2 bg-[#22262b] border-t border-[#3a4048] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#9aa2ad]">
@@ -315,33 +298,33 @@
                             <span><strong class="text-[#cfd5de]">Clic Der:</strong> Mover</span>
                             <span><strong class="text-[#cfd5de]">Rueda:</strong> Zoom</span>
                         </div>
-                        <div class="font-mono text-[10px]">.ipt sin alterar</div>
+                        <div class="font-mono text-[10px]">Archivo original sin alterar</div>
                     </div>
                 </div>
 
                 <div class="lg:col-span-4 p-4 flex flex-col justify-between gap-4 bg-[#272b30]">
                     <div class="space-y-3.5">
                         <div>
-                            <label class="text-[11px] font-mono uppercase tracking-wider text-[#9aa2ad] block mb-1.5">Archivo CAD Fuente (.ipt)</label>
+                            <label class="text-[11px] font-mono uppercase tracking-wider text-[#9aa2ad] block mb-1.5">Archivo CAD Fuente</label>
                             <div id="ipt-draggable-card" draggable="true" class="draggable-file-card p-3 rounded bg-[#1e2227] border border-[#3e454e] hover:border-[#1da1f2]">
                                 <div class="flex items-center gap-2.5">
                                     <div class="w-10 h-10 rounded bg-[#1da1f2]/15 border border-[#1da1f2]/40 flex flex-col items-center justify-center text-[#1da1f2] shrink-0">
                                         <i class="fa-solid fa-file-code text-base"></i>
-                                        <span class="text-[8px] font-mono font-bold leading-none mt-0.5">.IPT</span>
+                                        <span id="ipt-ext-badge" class="text-[8px] font-mono font-bold leading-none mt-0.5">.IPT</span>
                                     </div>
                                     <div class="min-w-0 flex-1">
                                         <p id="ipt-filename-display" class="text-xs font-mono font-semibold text-white truncate">pieza.ipt</p>
                                         <div class="flex items-center gap-2 text-[11px] text-[#9aa2ad] mt-0.5">
                                             <span id="ipt-filesize-display">0 KB</span>
                                             <span>•</span>
-                                            <span>Autodesk Inventor</span>
+                                            <span>Arrastrable a carpeta</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             <button onclick="downloadCurrentIptFile()" class="w-full mt-2 flex items-center justify-center gap-2 px-3 py-1.5 rounded bg-[#1da1f2] hover:bg-[#1488d1] text-white font-semibold text-xs transition">
-                                <i class="fa-solid fa-download"></i> Descargar .ipt Original
+                                <i class="fa-solid fa-download"></i> Descargar Archivo Original
                             </button>
                         </div>
 
@@ -405,7 +388,7 @@
         const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_2fuRdNLrO24nN5HA6e8lmw_v6IYVleX';
         const IPT_PREVIEW_ENDPOINT = '';
 
-        const DB_NAME = 'DataWaves_CAD_IPT_DB_V13';
+        const DB_NAME = 'DataWaves_CAD_IPT_DB_V15';
         const DB_VERSION = 1;
         const STORE_NAME = 'parts';
         const ADMIN_SECRET = 'datawaves';
@@ -449,11 +432,7 @@
         }
 
         function normalizeCodeKey(code) {
-            return String(code || '')
-                .trim()
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '');
+            return String(code || '').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         }
 
         function normalizeText(str) {
@@ -493,12 +472,7 @@
             const curObs = obsEl ? obsEl.value.trim() : (part.observaciones || '').trim();
 
             if (!snap) return true;
-            return (
-                curCode !== snap.codigo ||
-                curDesc !== snap.descripcion ||
-                curCat !== snap.categoria ||
-                curObs !== snap.observaciones
-            );
+            return curCode !== snap.codigo || curDesc !== snap.descripcion || curCat !== snap.categoria || curObs !== snap.observaciones;
         }
 
         function updatePendingChangesIndicator() {
@@ -564,10 +538,7 @@
 
             for (const part of partsList) {
                 const key = normalizeCodeKey(part.codigo);
-                if (!key) {
-                    uniqueParts.push(part);
-                    continue;
-                }
+                if (!key) { uniqueParts.push(part); continue; }
                 if (!seenByCode.has(key)) {
                     seenByCode.set(key, { part, index: uniqueParts.length });
                     uniqueParts.push(part);
@@ -631,9 +602,7 @@
             if (!skipDedup) {
                 const { uniqueParts, removedCount } = await deduplicatePartsByCode(rawParts);
                 finalParts = uniqueParts;
-                if (removedCount > 0) {
-                    showToast(`Se eliminaron ${removedCount} duplicado(s) existente(s) por código.`);
-                }
+                if (removedCount > 0) showToast(`Se eliminaron ${removedCount} duplicado(s) existente(s) por código.`);
             }
 
             for (const p of finalParts) buildSearchIndex(p);
@@ -747,10 +716,7 @@
 
         function getKnownCodeKeys(excludeDraftId = null) {
             const keys = new Set();
-            for (const p of allParts) {
-                const k = normalizeCodeKey(p.codigo);
-                if (k) keys.add(k);
-            }
+            for (const p of allParts) { const k = normalizeCodeKey(p.codigo); if (k) keys.add(k); }
             for (const r of draftRows) {
                 if (excludeDraftId && r.id === excludeDraftId) continue;
                 const k = normalizeCodeKey(r.codigo);
@@ -767,11 +733,7 @@
                 const workbook = XLSX.read(buf, { type: 'array' });
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
-                if (!rows || rows.length === 0) {
-                    showToast('El archivo Excel está vacío.');
-                    event.target.value = '';
-                    return;
-                }
+                if (!rows || rows.length === 0) { showToast('El archivo Excel está vacío.'); event.target.value = ''; return; }
 
                 syncDraftInputsFromDOM();
                 const firstRowNorm = rows[0].map(c => normalizeText(String(c || '').trim()));
@@ -787,8 +749,7 @@
                 draftRows = draftRows.filter(r => (r.codigo || r.descripcion || r.categoria || r.observaciones || '').trim() !== '' || pendingRowFiles[r.id]);
 
                 const knownCodes = getKnownCodeKeys();
-                let added = 0;
-                let skippedDuplicates = 0;
+                let added = 0, skippedDuplicates = 0;
 
                 for (let i = startRow; i < rows.length; i++) {
                     const r = rows[i];
@@ -823,19 +784,13 @@
         }
 
         function syncDraftInputsFromDOM() {
-            draftRows = draftRows.map(row => {
-                const c = document.getElementById(`draft-code-${row.id}`);
-                const d = document.getElementById(`draft-desc-${row.id}`);
-                const cat = document.getElementById(`draft-cat-${row.id}`);
-                const obs = document.getElementById(`draft-obs-${row.id}`);
-                return {
-                    ...row,
-                    codigo: c ? c.value : row.codigo,
-                    descripcion: d ? d.value : row.descripcion,
-                    categoria: cat ? cat.value : row.categoria,
-                    observaciones: obs ? obs.value : row.observaciones
-                };
-            });
+            draftRows = draftRows.map(row => ({
+                ...row,
+                codigo: document.getElementById(`draft-code-${row.id}`)?.value ?? row.codigo,
+                descripcion: document.getElementById(`draft-desc-${row.id}`)?.value ?? row.descripcion,
+                categoria: document.getElementById(`draft-cat-${row.id}`)?.value ?? row.categoria,
+                observaciones: document.getElementById(`draft-obs-${row.id}`)?.value ?? row.observaciones
+            }));
         }
 
         function addDraftRow(prefill = {}) {
@@ -906,10 +861,10 @@
                         <input type="text" id="draft-obs-${row.id}" value="${escapeHTML(row.observaciones)}" placeholder="Observaciones (opcional)" oninput="updatePendingChangesIndicator()" class="inline-cell-input text-[#aeb6c2]">
                     </div>
                     <div class="lg:col-span-2 flex items-center justify-end gap-1.5">
-                        <label title="Agregar archivo 3D (.ipt)" class="flex-1 cursor-pointer px-2 py-1 rounded ${attached ? 'bg-[#1da1f2]/20 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#272b30] hover:bg-[#32373e] border-[#3e454e] text-[#d5dbe2]'} border text-[11px] font-medium truncate flex items-center justify-center gap-1">
+                        <label title="Agregar archivo 3D (.ipt, .stl, .glb, .obj)" class="flex-1 cursor-pointer px-2 py-1 rounded ${attached ? 'bg-[#1da1f2]/20 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#272b30] hover:bg-[#32373e] border-[#3e454e] text-[#d5dbe2]'} border text-[11px] font-medium truncate flex items-center justify-center gap-1">
                             <i class="fa-solid fa-plus text-amber-400 shrink-0"></i>
                             <span class="truncate">${attached ? escapeHTML(attached.name) : '3D'}</span>
-                            <input type="file" accept=".ipt" class="hidden" onchange="onDraftFileSelected('${row.id}', event)">
+                            <input type="file" accept=".ipt,.stl,.glb,.gltf,.obj" class="hidden" onchange="onDraftFileSelected('${row.id}', event)">
                         </label>
                         <button type="button" onclick="removeDraftRow('${row.id}')" title="Quitar fila" class="px-2 py-1 rounded bg-[#272b30] hover:bg-red-950/60 text-[#9aa2ad] hover:text-red-400 text-xs">
                             <i class="fa-solid fa-xmark"></i>
@@ -942,7 +897,6 @@
 
             try {
                 syncDraftInputsFromDOM();
-                let savedCount = 0;
                 let skippedDuplicates = 0;
                 const changedPartsToPersist = [];
 
@@ -969,10 +923,7 @@
                     const duplicateInTable = Array.from(existingCodesMap.entries()).some(
                         ([otherId, k]) => otherId !== part.id && k === nextKey && nextKey !== ''
                     );
-                    if (duplicateInTable) {
-                        skippedDuplicates++;
-                        continue;
-                    }
+                    if (duplicateInTable) { skippedDuplicates++; continue; }
 
                     const updatedPart = {
                         ...part,
@@ -998,10 +949,7 @@
                     const attached = pendingRowFiles[row.id] || null;
 
                     const hasAnyData = Boolean(codigo || descripcion || categoria || observaciones || attached);
-                    if (!hasAnyData) {
-                        remainingDrafts.push(row);
-                        continue;
-                    }
+                    if (!hasAnyData) { remainingDrafts.push(row); continue; }
 
                     const codeKey = normalizeCodeKey(codigo);
                     if (codeKey && activeCodeKeys.has(codeKey)) {
@@ -1041,7 +989,6 @@
                                 categoria: item.updatedPart.categoria.trim(),
                                 observaciones: item.updatedPart.observaciones.trim()
                             });
-                            savedCount++;
                         }
                     }),
                     ...newDraftsToPersist.map(async item => {
@@ -1059,7 +1006,6 @@
                                 categoria: item.newPart.categoria.trim(),
                                 observaciones: item.newPart.observaciones.trim()
                             });
-                            savedCount++;
                         }
                     })
                 ]);
@@ -1074,9 +1020,7 @@
                 updatePendingChangesIndicator();
                 showSavedPopup();
 
-                if (skippedDuplicates > 0) {
-                    showToast(`${skippedDuplicates} duplicado(s) omitido(s).`);
-                }
+                if (skippedDuplicates > 0) showToast(`${skippedDuplicates} duplicado(s) omitido(s).`);
             } catch (err) {
                 showToast('Error al guardar: ' + err.message);
             }
@@ -1140,8 +1084,7 @@
                 } else {
                     syncDraftInputsFromDOM();
                     const knownCodes = getKnownCodeKeys();
-                    let added = 0;
-                    let skipped = 0;
+                    let added = 0, skipped = 0;
 
                     for (const file of files) {
                         const candidateCode = file.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
@@ -1234,9 +1177,9 @@
                                 <button type="button" ${has3D ? `onclick="openViewerModal('${part.id}')"` : 'disabled'} title="${btn3DTitle}" class="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded font-mono font-bold text-xs transition ${btn3DClasses}">
                                     <i class="fa-solid fa-cube"></i><span>3D</span>
                                 </button>
-                                <label title="${pendingFile ? 'Pendiente: ' + escapeHTML(pendingFile.name) : 'Agregar o cambiar 3D (.ipt)'}" class="cursor-pointer px-2 py-1 rounded ${pendingFile ? 'bg-[#1da1f2]/25 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-amber-400'} border text-xs font-bold transition inline-flex items-center">
+                                <label title="${pendingFile ? 'Pendiente: ' + escapeHTML(pendingFile.name) : 'Agregar o cambiar 3D (.ipt, .stl, .glb, .obj)'}" class="cursor-pointer px-2 py-1 rounded ${pendingFile ? 'bg-[#1da1f2]/25 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-amber-400'} border text-xs font-bold transition inline-flex items-center">
                                     <i class="fa-solid fa-plus"></i>
-                                    <input type="file" accept=".ipt" class="hidden" onchange="onTableRowFileSelected('${part.id}', event)">
+                                    <input type="file" accept=".ipt,.stl,.glb,.gltf,.obj" class="hidden" onchange="onTableRowFileSelected('${part.id}', event)">
                                 </label>
                             </div>
                         </td>
@@ -1308,22 +1251,54 @@
         function initThreeViewer() {
             const container = document.getElementById('viewer-canvas-container');
             if (renderer) return;
+            const w = container.clientWidth || 600;
+            const h = container.clientHeight || 420;
+
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x16191d);
-            camera = new THREE.PerspectiveCamera(45, (container.clientWidth || 600) / (container.clientHeight || 420), 0.1, 5000);
+
+            camera = new THREE.PerspectiveCamera(42, w / h, 0.1, 10000);
             camera.position.set(110, 85, 110);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(container.clientWidth || 600, container.clientHeight || 420);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+            renderer.setSize(w, h);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.12;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             container.appendChild(renderer.domElement);
+
+            // Mapa de reflejos de estudio para fidelidad metálica y superficial
+            if (THREE.PMREMGenerator && THREE.RoomEnvironment) {
+                const pmrem = new THREE.PMREMGenerator(renderer);
+                const envRT = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04);
+                scene.environment = envRT.texture;
+                pmrem.dispose();
+            }
+
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
-            const dl = new THREE.DirectionalLight(0xffffff, 0.95);
-            dl.position.set(100, 150, 100);
-            scene.add(dl);
-            gridHelper = new THREE.GridHelper(200, 20, 0x1da1f2, 0x2f353d);
-            gridHelper.position.y = -25;
+            controls.dampingFactor = 0.07;
+
+            const hemi = new THREE.HemisphereLight(0xf1f5f9, 0x1e242b, 0.85);
+            scene.add(hemi);
+
+            const keyLight = new THREE.DirectionalLight(0xffffff, 1.35);
+            keyLight.position.set(120, 180, 130);
+            keyLight.castShadow = true;
+            keyLight.shadow.mapSize.set(1024, 1024);
+            scene.add(keyLight);
+
+            const rimLight = new THREE.DirectionalLight(0x93c5fd, 0.55);
+            rimLight.position.set(-140, -60, -110);
+            scene.add(rimLight);
+
+            gridHelper = new THREE.GridHelper(200, 24, 0x1da1f2, 0x2c323b);
+            gridHelper.position.y = -35;
             scene.add(gridHelper);
+
             (function loop() {
                 requestAnimationFrame(loop);
                 if (isAutoRotating && currentMeshGroup) currentMeshGroup.rotation.y += 0.008;
@@ -1348,62 +1323,127 @@
             const box = new THREE.Box3().setFromObject(group);
             const size = box.getSize(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z) || 1;
-            group.scale.setScalar(70 / maxDim);
+            group.scale.setScalar(80 / maxDim);
+
             const centeredBox = new THREE.Box3().setFromObject(group);
             const center = centeredBox.getCenter(new THREE.Vector3());
             group.position.sub(center);
+
+            if (gridHelper) {
+                const scaledMinY = centeredBox.min.y - center.y;
+                gridHelper.position.y = scaledMinY - 2;
+            }
+
             group.traverse(child => {
-                if (child.isMesh && child.material) {
-                    if (Array.isArray(child.material)) child.material.forEach(m => m.wireframe = isWireframe);
-                    else child.material.wireframe = isWireframe;
+                if (child.isMesh) {
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    if (child.geometry && !child.geometry.attributes.normal) {
+                        child.geometry.computeVertexNormals();
+                    }
+                    if (child.material) {
+                        const mats = Array.isArray(child.material) ? child.material : [child.material];
+                        mats.forEach(m => {
+                            m.wireframe = isWireframe;
+                            m.side = THREE.DoubleSide;
+                            if ('metalness' in m && m.metalness === undefined) m.metalness = 0.45;
+                            if ('roughness' in m && m.roughness === undefined) m.roughness = 0.35;
+                            m.needsUpdate = true;
+                        });
+                    }
                 }
             });
+
             currentMeshGroup = group;
             scene.add(currentMeshGroup);
             resetCameraView();
         }
 
-        async function tryLoadPreviewFromParallelService(part) {
-            if (currentMeshGroup) { scene.remove(currentMeshGroup); currentMeshGroup = null; }
-            const notice = document.getElementById('ipt-native-notice');
-            document.getElementById('notice-ipt-name').textContent = part.iptFile ? part.iptFile.name : 'archivo';
-
-            if (!IPT_PREVIEW_ENDPOINT || !part.iptFile || !part.iptFile.data) {
-                notice.classList.remove('hidden');
-                return;
+        function renderBufferByFormat(buffer, format) {
+            if (format === 'stl' && THREE.STLLoader) {
+                const geom = new THREE.STLLoader().parse(buffer);
+                geom.computeVertexNormals();
+                const mat = new THREE.MeshStandardMaterial({
+                    color: 0xc8d2dc,
+                    metalness: 0.65,
+                    roughness: 0.32,
+                    side: THREE.DoubleSide
+                });
+                const g = new THREE.Group();
+                g.add(new THREE.Mesh(geom, mat));
+                finalizeLoaded3DGroup(g);
+                return true;
             }
+            if (format === 'obj' && THREE.OBJLoader) {
+                const obj = new THREE.OBJLoader().parse(new TextDecoder().decode(buffer));
+                obj.traverse(child => {
+                    if (child.isMesh && !child.material) {
+                        child.material = new THREE.MeshStandardMaterial({
+                            color: 0xc8d2dc,
+                            metalness: 0.6,
+                            roughness: 0.34,
+                            side: THREE.DoubleSide
+                        });
+                    }
+                });
+                finalizeLoaded3DGroup(obj);
+                return true;
+            }
+            if ((format === 'glb' || format === 'gltf') && THREE.GLTFLoader) {
+                new THREE.GLTFLoader().parse(buffer, '', gltf => finalizeLoaded3DGroup(gltf.scene));
+                return true;
+            }
+            return false;
+        }
 
+        async function load3DModelIntoViewer(part) {
+            if (currentMeshGroup) { scene.remove(currentMeshGroup); currentMeshGroup = null; }
+            const activeFile = pendingRowFiles[part.id] || part.iptFile;
+            if (!activeFile || !activeFile.data) return;
+
+            const ext = (activeFile.name.split('.').pop() || '').toLowerCase();
+            if (renderBufferByFormat(activeFile.data, ext)) return;
+
+            if (!IPT_PREVIEW_ENDPOINT) return;
             try {
                 const formData = new FormData();
-                formData.append('file', new Blob([part.iptFile.data], { type: 'application/octet-stream' }), part.iptFile.name);
+                formData.append('file', new Blob([activeFile.data], { type: 'application/octet-stream' }), activeFile.name);
                 formData.append('partId', part.id);
                 formData.append('code', part.codigo || '');
 
                 const res = await fetch(IPT_PREVIEW_ENDPOINT, { method: 'POST', body: formData });
-                if (!res.ok) throw new Error('Servicio no disponible');
-
+                if (!res.ok) return;
                 const format = (res.headers.get('X-Preview-Format') || 'glb').toLowerCase();
                 const buffer = await res.arrayBuffer();
-                notice.classList.add('hidden');
+                renderBufferByFormat(buffer, format);
+            } catch (_) {}
+        }
 
-                if (format === 'stl' && THREE.STLLoader) {
-                    const geom = new THREE.STLLoader().parse(buffer);
-                    geom.computeVertexNormals();
-                    const g = new THREE.Group();
-                    g.add(new THREE.Mesh(geom, new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.55, roughness: 0.35 })));
-                    finalizeLoaded3DGroup(g);
-                } else if (format === 'obj' && THREE.OBJLoader) {
-                    finalizeLoaded3DGroup(new THREE.OBJLoader().parse(new TextDecoder().decode(buffer)));
-                } else if (THREE.GLTFLoader) {
-                    new THREE.GLTFLoader().parse(buffer, '', gltf => finalizeLoaded3DGroup(gltf.scene), () => notice.classList.remove('hidden'));
-                }
-            } catch (_) {
-                notice.classList.remove('hidden');
+        function resetCameraView() {
+            if (!camera || !controls) return;
+            let radius = 65;
+            if (currentMeshGroup) {
+                const sphere = new THREE.Box3().setFromObject(currentMeshGroup).getBoundingSphere(new THREE.Sphere());
+                radius = Math.max(sphere.radius, 25);
+            }
+            const dist = radius * 2.35;
+            camera.position.set(dist * 0.85, dist * 0.68, dist * 0.85);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        }
+
+        function toggleWireframe() {
+            isWireframe = !isWireframe;
+            if (currentMeshGroup) {
+                currentMeshGroup.traverse(c => {
+                    if (c.isMesh && c.material) {
+                        const mats = Array.isArray(c.material) ? c.material : [c.material];
+                        mats.forEach(m => { m.wireframe = isWireframe; });
+                    }
+                });
             }
         }
 
-        function resetCameraView() { if (camera && controls) { camera.position.set(95, 75, 95); controls.target.set(0, 0, 0); controls.update(); } }
-        function toggleWireframe() { isWireframe = !isWireframe; if (currentMeshGroup) currentMeshGroup.traverse(c => { if (c.isMesh) c.material.wireframe = isWireframe; }); }
         function toggleGridHelper() { if (gridHelper) gridHelper.visible = !gridHelper.visible; }
         function toggleAutoRotate() { isAutoRotating = !isAutoRotating; }
 
@@ -1420,12 +1460,12 @@
             updateModalAdminPermissions();
             document.getElementById('viewer-modal').classList.remove('hidden');
 
-            if (isSupabaseConnected && supabaseClient && part.iptFile && part.iptFile.storagePath && !part.iptFile.data) {
+            if (!pendingRowFiles[part.id] && isSupabaseConnected && supabaseClient && part.iptFile && part.iptFile.storagePath && !part.iptFile.data) {
                 const { data, error } = await supabaseClient.storage.from(SB_BUCKET).download(part.iptFile.storagePath);
                 if (!error && data) part.iptFile.data = await data.arrayBuffer();
             }
             updateIptFileCardUI(part);
-            setTimeout(() => { initThreeViewer(); resizeThreeViewer(); tryLoadPreviewFromParallelService(part); }, 20);
+            setTimeout(() => { initThreeViewer(); resizeThreeViewer(); load3DModelIntoViewer(part); }, 20);
         }
 
         function closeViewerModal() {
@@ -1441,20 +1481,23 @@
         function updateIptFileCardUI(part) {
             const card = document.getElementById('ipt-draggable-card');
             if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+            const activeFile = pendingRowFiles[part.id] || part.iptFile;
 
-            if (part.iptFile && part.iptFile.data) {
-                const fileName = part.iptFile.name;
+            if (activeFile && activeFile.data) {
+                const fileName = activeFile.name;
+                const ext = '.' + (fileName.split('.').pop() || 'ipt').toUpperCase();
+                document.getElementById('ipt-ext-badge').textContent = ext;
                 document.getElementById('ipt-filename-display').textContent = fileName;
-                document.getElementById('ipt-filesize-display').textContent = formatBytes(part.iptFile.size);
+                document.getElementById('ipt-filesize-display').textContent = formatBytes(activeFile.size);
                 card.classList.remove('opacity-50', 'pointer-events-none');
-                const blob = new Blob([part.iptFile.data], { type: 'application/octet-stream' });
+                const blob = new Blob([activeFile.data], { type: 'application/octet-stream' });
                 currentBlobUrl = URL.createObjectURL(blob);
                 card.ondragstart = ev => {
                     ev.dataTransfer.setData('DownloadURL', `application/octet-stream:${fileName}:${currentBlobUrl}`);
                     ev.dataTransfer.effectAllowed = 'copy';
                 };
             } else {
-                document.getElementById('ipt-filename-display').textContent = 'Pendiente de cargar (.ipt)';
+                document.getElementById('ipt-filename-display').textContent = 'Sin archivo';
                 document.getElementById('ipt-filesize-display').textContent = '0 KB';
                 card.classList.add('opacity-50', 'pointer-events-none');
                 card.ondragstart = null;
@@ -1462,11 +1505,13 @@
         }
 
         function downloadCurrentIptFile() {
-            if (!currentViewingPart || !currentViewingPart.iptFile || !currentViewingPart.iptFile.data) return;
-            const blob = new Blob([currentViewingPart.iptFile.data], { type: 'application/octet-stream' });
+            if (!currentViewingPart) return;
+            const activeFile = pendingRowFiles[currentViewingPart.id] || currentViewingPart.iptFile;
+            if (!activeFile || !activeFile.data) return;
+            const blob = new Blob([activeFile.data], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url; a.download = currentViewingPart.iptFile.name;
+            a.href = url; a.download = activeFile.name;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
