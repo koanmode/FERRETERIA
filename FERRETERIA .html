@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DATAWAVES - FERRETERÍA CAD & VISOR 3D (.IPT)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        dw: {
+                            bg: '#1c1f24',
+                            topbar: '#15181c',
+                            panel: '#272b30',
+                            panelAlt: '#2e3339',
+                            border: '#3a4048',
+                            accent: '#1da1f2',
+                            accentHover: '#1488d1',
+                            text: '#e2e6ec',
+                            muted: '#9aa2ad'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #1c1f24;
+            color: #e2e6ec;
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        .dw-card {
+            background-color: #272b30;
+            border: 1px solid #353b42;
+            border-radius: 4px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+        }
+        .dw-card-header {
+            background-color: #2c3137;
+            border-bottom: 1px solid #3a4048;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #1c1f24; }
+        ::-webkit-scrollbar-thumb { background: #3e454e; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #1da1f2; }
+        .row-drop-active {
+            background-color: rgba(29, 161, 242, 0.22) !important;
+            outline: 2px solid #1da1f2;
+            outline-offset: -2px;
+        }
+        .draggable-file-card {
+            cursor: grab;
+        }
+        .draggable-file-card:active {
+            cursor: grabbing;
+        }
+        #viewer-canvas-container canvas {
+            display: block;
+            width: 100% !important;
+            height: 100% !important;
+            outline: none;
+        }
+        .inline-cell-input {
+            width: 100%;
+            background-color: #1e2227;
+            border: 1px solid #3e454e;
+            border-radius: 3px;
+            padding: 0.28rem 0.45rem;
+            color: #e2e6ec;
+            font-size: 0.75rem;
+        }
+        .inline-cell-input:focus {
+            outline: none;
+            border-color: #1da1f2;
+        }
+        .cell-changed {
+            border-color: #1da1f2 !important;
+            background-color: #172530 !important;
+        }
+    </style>
+</head>
+<body id="page-drop-root" class="min-h-screen flex flex-col">
+    <!-- Indicador superior discreto al arrastrar archivos: mantiene visible toda la tabla -->
+    <div id="page-drop-banner" class="hidden fixed top-14 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+        <div class="bg-[#23272c] border border-[#1da1f2] rounded px-3.5 py-1.5 shadow-xl flex items-center gap-2">
+            <i class="fa-solid fa-file-arrow-down text-[#1da1f2] text-xs"></i>
+            <span id="page-drop-target-label" class="text-xs font-mono text-[#e2e6ec]">Suelta sobre la fila deseada o en el listado</span>
+        </div>
+    </div>
+
+    <!-- Cuadro emergente de confirmación "Guardado" que desaparece brevemente -->
+    <div id="saved-popup" class="hidden fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+        <div class="bg-[#23272c] border border-emerald-400/80 rounded px-7 py-4 shadow-2xl flex items-center gap-3">
+            <span class="w-7 h-7 rounded bg-emerald-500/20 border border-emerald-400/50 flex items-center justify-center text-emerald-300 text-sm">
+                <i class="fa-solid fa-check"></i>
+            </span>
+            <span class="text-sm font-bold tracking-wide text-emerald-300">Guardado</span>
+        </div>
+    </div>
+
+    <!-- Barra superior estilo referencia -->
+    <header class="sticky top-0 z-30 bg-[#15181c] border-b border-[#2a2f36] h-12 flex items-center justify-between px-3 sm:px-5 gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+            <button onclick="focusFirstFilter()" title="Ir a filtros" class="text-[#c8cfd8] hover:text-white text-sm px-1.5 py-1">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+            <h1 class="font-semibold text-xs sm:text-sm tracking-wider uppercase text-[#e6eaef] truncate">
+                DATAWAVES - FERRETERÍA CAD 3D
+            </h1>
+            <span id="db-mode-pill" class="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded bg-[#23272c] text-[#b5bcc6] border border-[#343a42]">
+                <span id="db-mode-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                <span id="db-mode-text">Conectando...</span>
+            </span>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+            <div id="admin-toolbar-actions" class="hidden items-center gap-1.5">
+                <button onclick="saveAllProgress()" class="px-3 py-1 rounded bg-[#1da1f2] hover:bg-[#1488d1] text-white font-semibold text-xs transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    <span>Guardar</span>
+                </button>
+                <div class="relative group">
+                    <button title="Respaldo JSON" class="px-2.5 py-1 rounded bg-[#252a30] hover:bg-[#2f353d] border border-[#383e47] text-[#d5dbe2] text-xs transition">
+                        <i class="fa-solid fa-database text-[#1da1f2]"></i>
+                    </button>
+                    <div class="absolute right-0 mt-1.5 w-48 bg-[#23272c] border border-[#3a4048] rounded shadow-xl py-1 hidden group-hover:block z-50">
+                        <button onclick="exportDatabaseJSON()" class="w-full px-3 py-1.5 text-left text-xs text-[#e2e6ec] hover:bg-[#2e343b] flex items-center gap-2">
+                            <i class="fa-solid fa-file-export text-[#1da1f2]"></i> Exportar (.json)
+                        </button>
+                        <label class="w-full px-3 py-1.5 text-left text-xs text-[#e2e6ec] hover:bg-[#2e343b] flex items-center gap-2 cursor-pointer">
+                            <i class="fa-solid fa-file-import text-amber-400"></i> Importar (.json)
+                            <input type="file" id="import-json-input" accept=".json" class="hidden" onchange="importDatabaseJSON(event)">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <button id="auth-toggle-btn" onclick="handleAuthClick()" class="px-2.5 py-1 rounded bg-[#252a30] hover:bg-[#2f353d] border border-[#383e47] text-[#d5dbe2] text-xs font-medium transition flex items-center gap-1.5">
+                <i id="auth-icon" class="fa-solid fa-lock text-amber-400 text-[11px]"></i>
+                <span id="auth-btn-text">Admin</span>
+            </button>
+
+            <span id="role-badge" class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#22262b] border border-[#333941] text-[11px] text-[#aeb6c2]">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span>Lectura</span>
+            </span>
+        </div>
+    </header>
+
+    <main class="flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-5 py-4 space-y-4">
+        <!-- Panel superior de filtros estilo barra de búsqueda -->
+        <section class="dw-card p-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#cfd5de]">
+                    <i class="fa-solid fa-filter text-[#1da1f2]"></i>
+                    <span>Filtro Múltiple Acumulativo</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-[#9aa2ad]">Registros: <strong id="items-count" class="font-mono text-[#1da1f2]">0</strong></span>
+                    <button onclick="clearMultiSearch()" class="px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-xs text-[#e2e6ec] transition">
+                        Limpiar
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                <input type="text" id="multi-search-1" placeholder="Filtro 1..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="multi-search-2" placeholder="Filtro 2..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="multi-search-3" placeholder="Filtro 3..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="multi-search-4" placeholder="Filtro 4..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="multi-search-5" placeholder="Filtro 5..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+            </div>
+        </section>
+
+        <!-- Panel de carga rápida / Excel (solo Admin) -->
+        <section id="admin-quick-create-panel" class="hidden dw-card">
+            <div class="dw-card-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">
+                    <i class="fa-solid fa-table-list text-[#1da1f2]"></i>
+                    <span>CARGA RÁPIDA / EXCEL (SIN DUPLICADOS POR CÓDIGO)</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <label title="Importar Excel (.xlsx, .xls, .csv)" class="cursor-pointer px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-[#e2e6ec] text-xs font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel text-emerald-400"></i> Importar Excel
+                        <input type="file" id="import-excel-input" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleExcelImport(event)">
+                    </label>
+                    <button type="button" onclick="addDraftRow()" class="px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-[#e2e6ec] text-xs font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus text-[#1da1f2]"></i> Agregar fila
+                    </button>
+                    <button type="button" onclick="saveAllProgress()" class="px-3 py-1 rounded bg-[#1da1f2] hover:bg-[#1488d1] text-white text-xs font-semibold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+                    </button>
+                </div>
+            </div>
+            <div id="draft-rows-container" class="p-3 space-y-2"></div>
+        </section>
+
+        <!-- Tabla principal de componentes -->
+        <section class="dw-card overflow-hidden">
+            <div class="dw-card-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">COMPONENTES CAD (.IPT)</span>
+                    <span id="pending-changes-badge" class="hidden px-2 py-0.5 rounded bg-[#1da1f2]/20 border border-[#1da1f2]/50 text-[#69c3fa] font-mono text-[10px]">
+                        0 cambio(s) pendiente(s)
+                    </span>
+                </div>
+                <p class="text-[11px] text-[#9aa2ad]">
+                    Arrastra un archivo 3D directo a la fila o usa <strong class="text-[#1da1f2]">+</strong>; al guardar solo se envían los cambios.
+                </p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-[#22262b] border-b border-[#383e47] text-[11px] font-semibold text-[#c2c8d1]">
+                            <th class="py-2.5 px-3">Código</th>
+                            <th class="py-2.5 px-3">Descripción</th>
+                            <th class="py-2.5 px-3">Categoría</th>
+                            <th class="py-2.5 px-3">Observaciones</th>
+                            <th class="py-2.5 px-3 text-center">3D</th>
+                            <th id="admin-actions-th" class="hidden py-2.5 px-3 text-right">Admin</th>
+                        </tr>
+                    </thead>
+                    <tbody id="parts-table-body" class="divide-y divide-[#30363e] text-xs"></tbody>
+                </table>
+            </div>
+
+            <div id="empty-state" class="hidden py-12 px-4 text-center">
+                <p class="text-sm font-medium text-[#cfd5de]">No se encontraron ítems coincidentes</p>
+                <p class="text-xs text-[#9aa2ad] mt-1">Ningún registro cumple simultáneamente con todos los filtros ingresados.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-[#15181c] border-t border-[#2a2f36] py-2.5 px-4 mt-auto text-[11px] text-[#9aa2ad]">
+        <div class="max-w-[1440px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+                <span id="footer-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+                <span id="footer-status-text">Base de Datos: <strong>Conectando...</strong></span>
+            </div>
+            <div>Guardado diferencial por cambios • Sin duplicados por código • Archivo <code class="text-[#1da1f2]">.ipt</code> intacto</div>
+        </div>
+    </footer>
+
+    <!-- Modal Visor 3D -->
+    <div id="viewer-modal" class="fixed inset-0 z-50 hidden bg-black/80 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+        <div class="bg-[#272b30] border border-[#3a4048] rounded shadow-2xl w-full max-w-6xl overflow-hidden flex flex-col max-h-[95vh]">
+            <div class="px-4 py-2.5 bg-[#2c3137] border-b border-[#3a4048] flex items-center justify-between gap-4">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <span id="modal-part-code" class="px-2 py-0.5 rounded bg-[#1e2227] border border-[#3e454e] text-[#1da1f2] font-mono text-xs font-semibold shrink-0">PRT-001</span>
+                    <h3 id="modal-part-name" class="text-sm sm:text-base font-bold text-white truncate">Pieza</h3>
+                </div>
+                <button onclick="closeViewerModal()" class="w-7 h-7 rounded bg-[#1e2227] hover:bg-red-600/30 hover:text-red-300 text-[#aeb6c2] flex items-center justify-center transition shrink-0">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 flex-1 overflow-y-auto">
+                <div class="lg:col-span-8 flex flex-col bg-[#16191d] relative border-b lg:border-b-0 lg:border-r border-[#3a4048] min-h-[380px] sm:min-h-[480px]">
+                    <div class="absolute top-2.5 left-2.5 right-2.5 z-10 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+                        <div class="flex items-center gap-1 bg-[#272b30]/95 border border-[#3e454e] p-1 rounded pointer-events-auto">
+                            <button onclick="resetCameraView()" class="px-2 py-1 rounded text-xs text-[#e2e6ec] hover:bg-[#353b42] transition flex items-center gap-1">
+                                <i class="fa-solid fa-cube text-[#1da1f2]"></i> <span class="hidden sm:inline">Isométrica</span>
+                            </button>
+                            <button onclick="toggleWireframe()" class="px-2 py-1 rounded text-xs text-[#e2e6ec] hover:bg-[#353b42] transition flex items-center gap-1">
+                                <i class="fa-solid fa-border-all text-amber-400"></i> <span class="hidden sm:inline">Wireframe</span>
+                            </button>
+                            <button onclick="toggleGridHelper()" class="px-2 py-1 rounded text-xs text-[#1da1f2] bg-[#1e2227] transition">
+                                <i class="fa-solid fa-table-cells"></i>
+                            </button>
+                            <button onclick="toggleAutoRotate()" class="px-2 py-1 rounded text-xs text-[#e2e6ec] hover:bg-[#353b42] transition">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                            </button>
+                        </div>
+                        <div class="px-2.5 py-1 rounded bg-[#272b30]/95 border border-[#3e454e] text-[11px] font-mono text-[#cfd5de] pointer-events-auto">
+                            <i class="fa-solid fa-microchip text-[#1da1f2] mr-1"></i> Conector .IPT
+                        </div>
+                    </div>
+
+                    <div class="relative flex-1 w-full h-full select-none">
+                        <div id="viewer-canvas-container" class="w-full h-full min-h-[380px]"></div>
+                        <div id="ipt-native-notice" class="hidden absolute inset-0 flex items-center justify-center p-6 pointer-events-none">
+                            <div class="bg-[#272b30]/95 rounded p-5 max-w-md text-center border border-[#3e454e] pointer-events-auto shadow-xl">
+                                <h4 class="text-sm font-bold text-white">Vista Directa de .ipt Requiere Servicio Paralelo</h4>
+                                <p class="text-xs text-[#aeb6c2] mt-1.5 leading-relaxed">
+                                    El archivo <strong id="notice-ipt-name" class="text-[#1da1f2] font-mono"></strong> está guardado intacto sin modificar y listo para descargar o arrastrar a tu proyecto.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="px-3.5 py-2 bg-[#22262b] border-t border-[#3a4048] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#9aa2ad]">
+                        <div class="flex items-center gap-3">
+                            <span><strong class="text-[#cfd5de]">Clic Izq:</strong> Rotar</span>
+                            <span><strong class="text-[#cfd5de]">Clic Der:</strong> Mover</span>
+                            <span><strong class="text-[#cfd5de]">Rueda:</strong> Zoom</span>
+                        </div>
+                        <div class="font-mono text-[10px]">.ipt sin alterar</div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-4 p-4 flex flex-col justify-between gap-4 bg-[#272b30]">
+                    <div class="space-y-3.5">
+                        <div>
+                            <label class="text-[11px] font-mono uppercase tracking-wider text-[#9aa2ad] block mb-1.5">Archivo CAD Fuente (.ipt)</label>
+                            <div id="ipt-draggable-card" draggable="true" class="draggable-file-card p-3 rounded bg-[#1e2227] border border-[#3e454e] hover:border-[#1da1f2]">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-10 h-10 rounded bg-[#1da1f2]/15 border border-[#1da1f2]/40 flex flex-col items-center justify-center text-[#1da1f2] shrink-0">
+                                        <i class="fa-solid fa-file-code text-base"></i>
+                                        <span class="text-[8px] font-mono font-bold leading-none mt-0.5">.IPT</span>
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p id="ipt-filename-display" class="text-xs font-mono font-semibold text-white truncate">pieza.ipt</p>
+                                        <div class="flex items-center gap-2 text-[11px] text-[#9aa2ad] mt-0.5">
+                                            <span id="ipt-filesize-display">0 KB</span>
+                                            <span>•</span>
+                                            <span>Autodesk Inventor</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onclick="downloadCurrentIptFile()" class="w-full mt-2 flex items-center justify-center gap-2 px-3 py-1.5 rounded bg-[#1da1f2] hover:bg-[#1488d1] text-white font-semibold text-xs transition">
+                                <i class="fa-solid fa-download"></i> Descargar .ipt Original
+                            </button>
+                        </div>
+
+                        <div class="bg-[#1e2227] border border-[#353b42] rounded p-3 space-y-2 text-xs">
+                            <div class="flex justify-between py-1 border-b border-[#2e343b]">
+                                <span class="text-[#9aa2ad]">Categoría:</span>
+                                <span id="modal-part-category" class="font-medium text-[#e2e6ec]">-</span>
+                            </div>
+                            <div class="flex justify-between py-1 border-b border-[#2e343b]">
+                                <span class="text-[#9aa2ad]">Actualización:</span>
+                                <span id="modal-part-date" class="font-mono text-[#cfd5de]">-</span>
+                            </div>
+                            <div>
+                                <span class="text-[#9aa2ad] block mb-1">Observaciones:</span>
+                                <p id="modal-part-notes" class="text-[#e2e6ec] bg-[#272b30] p-2 rounded border border-[#353b42] leading-relaxed">-</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="modal-admin-footer" class="hidden pt-2.5 border-t border-[#3a4048]">
+                        <button onclick="deleteCurrentModalItem()" class="w-full py-1.5 px-3 rounded bg-red-950/60 hover:bg-red-900/70 border border-red-800/60 text-xs font-medium text-red-200 transition flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-trash"></i> Eliminar Ítem
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Auth -->
+    <div id="auth-modal" class="fixed inset-0 z-50 hidden bg-black/75 flex items-center justify-center p-4">
+        <div class="bg-[#272b30] border border-[#3a4048] rounded shadow-2xl w-full max-w-sm p-5 text-center">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-white">Acceso Administrador</h3>
+            <form onsubmit="verifyAdminPassword(event)" class="mt-3.5 space-y-3">
+                <input type="password" id="admin-password-input" placeholder="Contraseña" required class="w-full px-3 py-2 bg-[#1e2227] border border-[#3e454e] rounded text-xs text-white text-center focus:outline-none focus:border-[#1da1f2]">
+                <p id="auth-error-msg" class="hidden text-xs text-red-400">Contraseña incorrecta.</p>
+                <div class="flex gap-2 pt-1">
+                    <button type="button" onclick="closeAuthModal()" class="flex-1 py-2 rounded bg-[#32373e] text-xs font-medium text-[#d5dbe2]">Cancelar</button>
+                    <button type="submit" class="flex-1 py-2 rounded bg-[#1da1f2] hover:bg-[#1488d1] text-white font-semibold text-xs">Desbloquear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Confirmar -->
+    <div id="confirm-modal" class="fixed inset-0 z-50 hidden bg-black/75 flex items-center justify-center p-4">
+        <div class="bg-[#272b30] border border-[#3a4048] rounded shadow-2xl w-full max-w-sm p-5 text-center">
+            <h4 id="confirm-title" class="text-sm font-bold text-white">¿Confirmar?</h4>
+            <p id="confirm-message" class="text-xs text-[#aeb6c2] mt-1.5"></p>
+            <div class="flex gap-2 mt-4">
+                <button onclick="closeConfirmModal()" class="flex-1 py-1.5 rounded bg-[#32373e] text-xs font-medium text-[#d5dbe2]">Cancelar</button>
+                <button id="confirm-accept-btn" class="flex-1 py-1.5 rounded bg-red-600 hover:bg-red-500 text-xs font-semibold text-white">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        const DEFAULT_SUPABASE_URL = 'https://sksanvauywgjxmxujicl.supabase.co';
+        const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_2fuRdNLrO24nN5HA6e8lmw_v6IYVleX';
+        const IPT_PREVIEW_ENDPOINT = '';
+
+        const DB_NAME = 'DataWaves_CAD_IPT_DB_V13';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'parts';
+        const ADMIN_SECRET = 'datawaves';
+        const SB_TABLE = 'cad_parts';
+        const SB_BUCKET = 'cad-models';
+
+        let supabaseClient = null;
+        let isSupabaseConnected = false;
+        let db = null;
+        let allParts = [];
+        let baselineSnapshots = new Map();
+        let draftRows = [];
+        let pendingRowFiles = {};
+        let isAdmin = false;
+        let currentViewingPart = null;
+        let currentBlobUrl = null;
+        let confirmCallback = null;
+        let scene, camera, renderer, controls, currentMeshGroup, gridHelper;
+        let isWireframe = false;
+        let isAutoRotating = false;
+        let savedPopupTimer = null;
+        let filterDebounceTimer = null;
+
+        function partHas3D(part) {
+            if (!part) return false;
+            if (pendingRowFiles[part.id]) return true;
+            return Boolean(part.iptFile && (part.iptFile.data || part.iptFile.storagePath));
+        }
+
+        function showSavedPopup() {
+            const popup = document.getElementById('saved-popup');
+            if (!popup) return;
+            popup.classList.remove('hidden');
+            if (savedPopupTimer) clearTimeout(savedPopupTimer);
+            savedPopupTimer = setTimeout(() => popup.classList.add('hidden'), 1200);
+        }
+
+        function focusFirstFilter() {
+            const el = document.getElementById('multi-search-1');
+            if (el) el.focus();
+        }
+
+        function normalizeCodeKey(code) {
+            return String(code || '')
+                .trim()
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '');
+        }
+
+        function normalizeText(str) {
+            return !str ? '' : String(str).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+
+        function buildSearchIndex(part) {
+            part._searchNorm = normalizeText([
+                part.codigo, part.descripcion, part.categoria, part.observaciones,
+                part.iptFile ? part.iptFile.name : ''
+            ].join(' '));
+        }
+
+        function captureBaselineSnapshots(parts) {
+            baselineSnapshots.clear();
+            for (const p of parts) {
+                baselineSnapshots.set(p.id, {
+                    codigo: (p.codigo || '').trim(),
+                    descripcion: (p.descripcion || '').trim(),
+                    categoria: (p.categoria || '').trim(),
+                    observaciones: (p.observaciones || '').trim()
+                });
+            }
+        }
+
+        function isPartRowChangedInDOM(part) {
+            if (pendingRowFiles[part.id]) return true;
+            const snap = baselineSnapshots.get(part.id);
+            const codeEl = document.getElementById(`edit-code-${part.id}`);
+            const descEl = document.getElementById(`edit-desc-${part.id}`);
+            const catEl = document.getElementById(`edit-cat-${part.id}`);
+            const obsEl = document.getElementById(`edit-obs-${part.id}`);
+
+            const curCode = codeEl ? codeEl.value.trim() : (part.codigo || '').trim();
+            const curDesc = descEl ? descEl.value.trim() : (part.descripcion || '').trim();
+            const curCat = catEl ? catEl.value.trim() : (part.categoria || '').trim();
+            const curObs = obsEl ? obsEl.value.trim() : (part.observaciones || '').trim();
+
+            if (!snap) return true;
+            return (
+                curCode !== snap.codigo ||
+                curDesc !== snap.descripcion ||
+                curCat !== snap.categoria ||
+                curObs !== snap.observaciones
+            );
+        }
+
+        function updatePendingChangesIndicator() {
+            const badge = document.getElementById('pending-changes-badge');
+            if (!badge || !isAdmin) {
+                if (badge) badge.classList.add('hidden');
+                return;
+            }
+            let count = 0;
+            for (const p of allParts) {
+                if (isPartRowChangedInDOM(p)) count++;
+            }
+            for (const r of draftRows) {
+                const c = document.getElementById(`draft-code-${r.id}`);
+                const d = document.getElementById(`draft-desc-${r.id}`);
+                const cat = document.getElementById(`draft-cat-${r.id}`);
+                const obs = document.getElementById(`draft-obs-${r.id}`);
+                const hasVal = [c ? c.value : r.codigo, d ? d.value : r.descripcion, cat ? cat.value : r.categoria, obs ? obs.value : r.observaciones]
+                    .some(x => String(x || '').trim() !== '');
+                if (hasVal || pendingRowFiles[r.id]) count++;
+            }
+            if (count > 0) {
+                badge.textContent = `${count} cambio(s) pendiente(s)`;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function initSupabase() {
+            if (DEFAULT_SUPABASE_URL && DEFAULT_SUPABASE_ANON_KEY && window.supabase) {
+                supabaseClient = window.supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_ANON_KEY);
+                isSupabaseConnected = true;
+                updateDbConnectionBadge(true);
+                return true;
+            }
+            updateDbConnectionBadge(false);
+            return false;
+        }
+
+        function updateDbConnectionBadge(connected) {
+            document.getElementById('db-mode-dot').className = connected ? 'w-1.5 h-1.5 rounded-full bg-emerald-400' : 'w-1.5 h-1.5 rounded-full bg-amber-400';
+            document.getElementById('db-mode-text').textContent = connected ? 'Supabase OK' : 'Sin conectar';
+            document.getElementById('footer-status-dot').className = connected ? 'w-2 h-2 rounded-full bg-emerald-400' : 'w-2 h-2 rounded-full bg-amber-400';
+            document.getElementById('footer-status-text').innerHTML = connected
+                ? 'Base de Datos Conectada: <strong class="text-emerald-400">Supabase</strong>'
+                : 'Base de Datos: <strong>Sin conectar</strong>';
+        }
+
+        async function deduplicatePartsByCode(partsList) {
+            const seenByCode = new Map();
+            const uniqueParts = [];
+            const duplicatesToDelete = [];
+
+            const scorePart = p => {
+                let s = 0;
+                if (p.iptFile && (p.iptFile.data || p.iptFile.storagePath)) s += 100;
+                if ((p.descripcion || '').trim()) s += 2;
+                if ((p.categoria || '').trim()) s += 2;
+                if ((p.observaciones || '').trim()) s += 1;
+                return s;
+            };
+
+            for (const part of partsList) {
+                const key = normalizeCodeKey(part.codigo);
+                if (!key) {
+                    uniqueParts.push(part);
+                    continue;
+                }
+                if (!seenByCode.has(key)) {
+                    seenByCode.set(key, { part, index: uniqueParts.length });
+                    uniqueParts.push(part);
+                } else {
+                    const prev = seenByCode.get(key);
+                    if (scorePart(part) > scorePart(prev.part)) {
+                        duplicatesToDelete.push(prev.part);
+                        uniqueParts[prev.index] = part;
+                        seenByCode.set(key, { part, index: prev.index });
+                    } else {
+                        duplicatesToDelete.push(part);
+                    }
+                }
+            }
+
+            if (duplicatesToDelete.length > 0 && isSupabaseConnected && supabaseClient) {
+                await Promise.all(duplicatesToDelete.map(async dup => {
+                    if (dup.iptFile && dup.iptFile.storagePath) {
+                        await supabaseClient.storage.from(SB_BUCKET).remove([dup.iptFile.storagePath]);
+                    }
+                    await supabaseClient.from(SB_TABLE).delete().eq('id', dup.id);
+                    await deletePartFromDB(dup.id);
+                }));
+            }
+
+            return { uniqueParts, removedCount: duplicatesToDelete.length };
+        }
+
+        async function fetchAllParts(skipDedup = false) {
+            const localParts = await getAllPartsFromDB();
+            const localMap = new Map(localParts.map(x => [x.id, x]));
+            let rawParts = localParts;
+
+            if (isSupabaseConnected && supabaseClient) {
+                const { data, error } = await supabaseClient.from(SB_TABLE).select('*').order('codigo', { ascending: true });
+                if (error) {
+                    showToast('Error leyendo Supabase: ' + error.message);
+                } else {
+                    rawParts = (data || []).map(row => {
+                        const localMatch = localMap.get(row.id);
+                        return {
+                            id: row.id,
+                            codigo: row.codigo || '',
+                            descripcion: row.descripcion || '',
+                            categoria: row.categoria || '',
+                            observaciones: row.observaciones || '',
+                            date: row.updated_at || '',
+                            iptFile: row.ipt_path ? {
+                                name: row.ipt_name || `${row.codigo || 'pieza'}.ipt`,
+                                size: row.ipt_size || 0,
+                                type: 'application/octet-stream',
+                                storagePath: row.ipt_path,
+                                data: localMatch && localMatch.iptFile ? localMatch.iptFile.data : null
+                            } : (localMatch ? localMatch.iptFile : null)
+                        };
+                    });
+                }
+            }
+
+            let finalParts = rawParts;
+            if (!skipDedup) {
+                const { uniqueParts, removedCount } = await deduplicatePartsByCode(rawParts);
+                finalParts = uniqueParts;
+                if (removedCount > 0) {
+                    showToast(`Se eliminaron ${removedCount} duplicado(s) existente(s) por código.`);
+                }
+            }
+
+            for (const p of finalParts) buildSearchIndex(p);
+            captureBaselineSnapshots(finalParts);
+            return finalParts;
+        }
+
+        async function persistPartRecord(partObj, newIptBuffer = null, newIptName = null) {
+            if (!isSupabaseConnected || !supabaseClient) {
+                showToast('No hay conexión activa con Supabase.');
+                return false;
+            }
+
+            if (newIptBuffer && newIptName) {
+                partObj.iptFile = {
+                    name: newIptName,
+                    size: newIptBuffer.byteLength,
+                    type: 'application/octet-stream',
+                    storagePath: partObj.iptFile ? partObj.iptFile.storagePath : null,
+                    data: newIptBuffer
+                };
+            }
+
+            let storagePath = partObj.iptFile ? partObj.iptFile.storagePath : null;
+            let fileName = partObj.iptFile ? partObj.iptFile.name : null;
+            let fileSize = partObj.iptFile ? partObj.iptFile.size : 0;
+
+            if (newIptBuffer && newIptName) {
+                const cleanName = newIptName.replace(/[^a-zA-Z0-9._-]/g, '_');
+                storagePath = `${partObj.id}/${Date.now()}_${cleanName}`;
+                const blob = new Blob([newIptBuffer], { type: 'application/octet-stream' });
+                const { error: uploadError } = await supabaseClient.storage.from(SB_BUCKET).upload(storagePath, blob, { upsert: true });
+                if (uploadError) throw new Error('Storage: ' + uploadError.message);
+                partObj.iptFile.storagePath = storagePath;
+            }
+
+            const { error: dbError } = await supabaseClient.from(SB_TABLE).upsert({
+                id: partObj.id,
+                codigo: partObj.codigo,
+                descripcion: partObj.descripcion,
+                categoria: partObj.categoria,
+                observaciones: partObj.observaciones,
+                ipt_name: fileName,
+                ipt_size: fileSize,
+                ipt_path: storagePath,
+                preset_shape: 'ipt_service',
+                updated_at: new Date().toISOString().split('T')[0]
+            });
+            if (dbError) throw new Error('Base de datos: ' + dbError.message);
+
+            buildSearchIndex(partObj);
+            await savePartToDB(partObj);
+            return true;
+        }
+
+        async function removePartRecord(part) {
+            if (!isSupabaseConnected || !supabaseClient) {
+                showToast('No hay conexión activa con Supabase.');
+                return false;
+            }
+            if (part.iptFile && part.iptFile.storagePath) {
+                await supabaseClient.storage.from(SB_BUCKET).remove([part.iptFile.storagePath]);
+            }
+            const { error } = await supabaseClient.from(SB_TABLE).delete().eq('id', part.id);
+            if (error) throw new Error(error.message);
+            await deletePartFromDB(part.id);
+            return true;
+        }
+
+        function initIndexedDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = e => {
+                    if (!e.target.result.objectStoreNames.contains(STORE_NAME)) {
+                        e.target.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = e => { db = e.target.result; resolve(db); };
+                req.onerror = e => reject(e.target.error);
+            });
+        }
+
+        function getAllPartsFromDB() {
+            return new Promise((resolve, reject) => {
+                const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function savePartToDB(part) {
+            return new Promise((resolve, reject) => {
+                const req = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put(part);
+                req.onsuccess = () => resolve(true);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function deletePartFromDB(id) {
+            return new Promise((resolve, reject) => {
+                const req = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).delete(id);
+                req.onsuccess = () => resolve(true);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function clearMultiSearch() {
+            for (let i = 1; i <= 5; i++) document.getElementById(`multi-search-${i}`).value = '';
+            renderPartsTable();
+        }
+
+        function getKnownCodeKeys(excludeDraftId = null) {
+            const keys = new Set();
+            for (const p of allParts) {
+                const k = normalizeCodeKey(p.codigo);
+                if (k) keys.add(k);
+            }
+            for (const r of draftRows) {
+                if (excludeDraftId && r.id === excludeDraftId) continue;
+                const k = normalizeCodeKey(r.codigo);
+                if (k) keys.add(k);
+            }
+            return keys;
+        }
+
+        async function handleExcelImport(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file || !window.XLSX) return;
+            try {
+                const buf = await file.arrayBuffer();
+                const workbook = XLSX.read(buf, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+                if (!rows || rows.length === 0) {
+                    showToast('El archivo Excel está vacío.');
+                    event.target.value = '';
+                    return;
+                }
+
+                syncDraftInputsFromDOM();
+                const firstRowNorm = rows[0].map(c => normalizeText(String(c || '').trim()));
+                let codeIdx = firstRowNorm.findIndex(h => ['codigo', 'código', 'code', 'cod'].includes(h));
+                let descIdx = firstRowNorm.findIndex(h => ['descripcion', 'descripción', 'description', 'desc'].includes(h));
+                let catIdx = firstRowNorm.findIndex(h => ['categoria', 'categoría', 'category', 'cat'].includes(h));
+                let obsIdx = firstRowNorm.findIndex(h => ['observaciones', 'observacion', 'observación', 'notes'].includes(h));
+
+                const hasHeader = codeIdx !== -1 || descIdx !== -1 || catIdx !== -1;
+                if (!hasHeader) { codeIdx = 0; descIdx = 1; catIdx = 2; obsIdx = 3; }
+
+                const startRow = hasHeader ? 1 : 0;
+                draftRows = draftRows.filter(r => (r.codigo || r.descripcion || r.categoria || r.observaciones || '').trim() !== '' || pendingRowFiles[r.id]);
+
+                const knownCodes = getKnownCodeKeys();
+                let added = 0;
+                let skippedDuplicates = 0;
+
+                for (let i = startRow; i < rows.length; i++) {
+                    const r = rows[i];
+                    if (!Array.isArray(r)) continue;
+                    const codigo = codeIdx >= 0 ? String(r[codeIdx] ?? '').trim() : '';
+                    const descripcion = descIdx >= 0 ? String(r[descIdx] ?? '').trim() : '';
+                    const categoria = catIdx >= 0 ? String(r[catIdx] ?? '').trim() : '';
+                    const observaciones = obsIdx >= 0 ? String(r[obsIdx] ?? '').trim() : '';
+                    if (!codigo && !descripcion && !categoria && !observaciones) continue;
+
+                    const codeKey = normalizeCodeKey(codigo);
+                    if (codeKey && knownCodes.has(codeKey)) { skippedDuplicates++; continue; }
+                    if (codeKey) knownCodes.add(codeKey);
+
+                    draftRows.push({
+                        id: 'draft-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2, 5),
+                        codigo, descripcion, categoria, observaciones
+                    });
+                    added++;
+                }
+
+                if (draftRows.length === 0) addDraftRow();
+                renderDraftRows();
+                updatePendingChangesIndicator();
+                showToast(skippedDuplicates > 0
+                    ? `Agregados ${added}; ${skippedDuplicates} duplicado(s) omitido(s) por código.`
+                    : `Se cargaron ${added} fila(s). Pulsa Guardar para confirmar.`);
+            } catch (err) {
+                showToast('Error al leer Excel: ' + err.message);
+            }
+            event.target.value = '';
+        }
+
+        function syncDraftInputsFromDOM() {
+            draftRows = draftRows.map(row => {
+                const c = document.getElementById(`draft-code-${row.id}`);
+                const d = document.getElementById(`draft-desc-${row.id}`);
+                const cat = document.getElementById(`draft-cat-${row.id}`);
+                const obs = document.getElementById(`draft-obs-${row.id}`);
+                return {
+                    ...row,
+                    codigo: c ? c.value : row.codigo,
+                    descripcion: d ? d.value : row.descripcion,
+                    categoria: cat ? cat.value : row.categoria,
+                    observaciones: obs ? obs.value : row.observaciones
+                };
+            });
+        }
+
+        function addDraftRow(prefill = {}) {
+            syncDraftInputsFromDOM();
+            if (prefill.codigo) {
+                const key = normalizeCodeKey(prefill.codigo);
+                if (key && getKnownCodeKeys().has(key)) {
+                    showToast(`El código "${prefill.codigo}" ya existe y no se agregará duplicado.`);
+                    return;
+                }
+            }
+            draftRows.push({
+                id: 'draft-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+                codigo: prefill.codigo || '',
+                descripcion: prefill.descripcion || '',
+                categoria: prefill.categoria || '',
+                observaciones: prefill.observaciones || ''
+            });
+            renderDraftRows();
+            updatePendingChangesIndicator();
+        }
+
+        function removeDraftRow(rowId) {
+            syncDraftInputsFromDOM();
+            draftRows = draftRows.filter(r => r.id !== rowId);
+            delete pendingRowFiles[rowId];
+            if (draftRows.length === 0) addDraftRow();
+            else renderDraftRows();
+            updatePendingChangesIndicator();
+        }
+
+        async function onDraftFileSelected(rowId, event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            syncDraftInputsFromDOM();
+            const buf = await file.arrayBuffer();
+            pendingRowFiles[rowId] = { name: file.name, size: buf.byteLength, data: buf };
+            const row = draftRows.find(r => r.id === rowId);
+            if (row && !row.codigo) {
+                const candidate = file.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
+                const key = normalizeCodeKey(candidate);
+                if (!key || !getKnownCodeKeys(rowId).has(key)) row.codigo = candidate;
+            }
+            renderDraftRows();
+            updatePendingChangesIndicator();
+        }
+
+        function renderDraftRows() {
+            const container = document.getElementById('draft-rows-container');
+            if (!container) return;
+            const frag = document.createDocumentFragment();
+
+            draftRows.forEach((row, idx) => {
+                const attached = pendingRowFiles[row.id];
+                const div = document.createElement('div');
+                div.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center bg-[#1e2227] border border-[#353b42] rounded p-2';
+                div.innerHTML = `
+                    <div class="lg:col-span-2">
+                        <input type="text" id="draft-code-${row.id}" value="${escapeHTML(row.codigo)}" placeholder="Código #${idx + 1}" oninput="updatePendingChangesIndicator()" class="inline-cell-input font-mono text-[#1da1f2]">
+                    </div>
+                    <div class="lg:col-span-3">
+                        <input type="text" id="draft-desc-${row.id}" value="${escapeHTML(row.descripcion)}" placeholder="Descripción (opcional)" oninput="updatePendingChangesIndicator()" class="inline-cell-input">
+                    </div>
+                    <div class="lg:col-span-2">
+                        <input type="text" id="draft-cat-${row.id}" value="${escapeHTML(row.categoria)}" placeholder="Categoría (opcional)" oninput="updatePendingChangesIndicator()" class="inline-cell-input">
+                    </div>
+                    <div class="lg:col-span-3">
+                        <input type="text" id="draft-obs-${row.id}" value="${escapeHTML(row.observaciones)}" placeholder="Observaciones (opcional)" oninput="updatePendingChangesIndicator()" class="inline-cell-input text-[#aeb6c2]">
+                    </div>
+                    <div class="lg:col-span-2 flex items-center justify-end gap-1.5">
+                        <label title="Agregar archivo 3D (.ipt)" class="flex-1 cursor-pointer px-2 py-1 rounded ${attached ? 'bg-[#1da1f2]/20 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#272b30] hover:bg-[#32373e] border-[#3e454e] text-[#d5dbe2]'} border text-[11px] font-medium truncate flex items-center justify-center gap-1">
+                            <i class="fa-solid fa-plus text-amber-400 shrink-0"></i>
+                            <span class="truncate">${attached ? escapeHTML(attached.name) : '3D'}</span>
+                            <input type="file" accept=".ipt" class="hidden" onchange="onDraftFileSelected('${row.id}', event)">
+                        </label>
+                        <button type="button" onclick="removeDraftRow('${row.id}')" title="Quitar fila" class="px-2 py-1 rounded bg-[#272b30] hover:bg-red-950/60 text-[#9aa2ad] hover:text-red-400 text-xs">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                `;
+                frag.appendChild(div);
+            });
+
+            container.innerHTML = '';
+            container.appendChild(frag);
+        }
+
+        async function onTableRowFileSelected(partId, event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            const buf = await file.arrayBuffer();
+            pendingRowFiles[partId] = { name: file.name, size: buf.byteLength, data: buf };
+            renderPartsTable();
+            updatePendingChangesIndicator();
+            showToast(`3D asignado a la fila (${file.name}). Pulsa Guardar para confirmar.`);
+        }
+
+        async function saveAllProgress() {
+            if (!isAdmin) return;
+            if (!isSupabaseConnected || !supabaseClient) {
+                showToast('No hay conexión activa con Supabase.');
+                return;
+            }
+
+            try {
+                syncDraftInputsFromDOM();
+                let savedCount = 0;
+                let skippedDuplicates = 0;
+                const changedPartsToPersist = [];
+
+                const existingCodesMap = new Map();
+                for (const p of allParts) {
+                    const el = document.getElementById(`edit-code-${p.id}`);
+                    const val = el ? el.value.trim() : p.codigo;
+                    const key = normalizeCodeKey(val);
+                    if (key) existingCodesMap.set(p.id, key);
+                }
+
+                for (const part of allParts) {
+                    if (!isPartRowChangedInDOM(part)) continue;
+
+                    const codeEl = document.getElementById(`edit-code-${part.id}`);
+                    const descEl = document.getElementById(`edit-desc-${part.id}`);
+                    const catEl = document.getElementById(`edit-cat-${part.id}`);
+                    const obsEl = document.getElementById(`edit-obs-${part.id}`);
+                    const fileForPart = pendingRowFiles[part.id] || null;
+
+                    const nextCode = codeEl ? codeEl.value.trim() : part.codigo;
+                    const nextKey = normalizeCodeKey(nextCode);
+
+                    const duplicateInTable = Array.from(existingCodesMap.entries()).some(
+                        ([otherId, k]) => otherId !== part.id && k === nextKey && nextKey !== ''
+                    );
+                    if (duplicateInTable) {
+                        skippedDuplicates++;
+                        continue;
+                    }
+
+                    const updatedPart = {
+                        ...part,
+                        codigo: nextCode,
+                        descripcion: descEl ? descEl.value.trim() : part.descripcion,
+                        categoria: catEl ? catEl.value.trim() : part.categoria,
+                        observaciones: obsEl ? obsEl.value.trim() : part.observaciones,
+                        date: new Date().toISOString().split('T')[0]
+                    };
+
+                    changedPartsToPersist.push({ updatedPart, fileForPart, partId: part.id });
+                }
+
+                const activeCodeKeys = new Set(allParts.map(p => normalizeCodeKey(p.codigo)).filter(Boolean));
+                const remainingDrafts = [];
+                const newDraftsToPersist = [];
+
+                for (const row of draftRows) {
+                    const codigo = (row.codigo || '').trim();
+                    const descripcion = (row.descripcion || '').trim();
+                    const categoria = (row.categoria || '').trim();
+                    const observaciones = (row.observaciones || '').trim();
+                    const attached = pendingRowFiles[row.id] || null;
+
+                    const hasAnyData = Boolean(codigo || descripcion || categoria || observaciones || attached);
+                    if (!hasAnyData) {
+                        remainingDrafts.push(row);
+                        continue;
+                    }
+
+                    const codeKey = normalizeCodeKey(codigo);
+                    if (codeKey && activeCodeKeys.has(codeKey)) {
+                        skippedDuplicates++;
+                        delete pendingRowFiles[row.id];
+                        continue;
+                    }
+                    if (codeKey) activeCodeKeys.add(codeKey);
+
+                    const newPart = {
+                        id: 'part-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+                        codigo: codigo || 'PENDIENTE',
+                        descripcion: descripcion || '',
+                        categoria: categoria || '',
+                        observaciones,
+                        date: new Date().toISOString().split('T')[0],
+                        iptFile: null
+                    };
+
+                    newDraftsToPersist.push({ newPart, attached, draftId: row.id });
+                }
+
+                await Promise.all([
+                    ...changedPartsToPersist.map(async item => {
+                        const ok = await persistPartRecord(
+                            item.updatedPart,
+                            item.fileForPart ? item.fileForPart.data : null,
+                            item.fileForPart ? item.fileForPart.name : null
+                        );
+                        if (ok) {
+                            delete pendingRowFiles[item.partId];
+                            const idx = allParts.findIndex(x => x.id === item.partId);
+                            if (idx !== -1) allParts[idx] = item.updatedPart;
+                            baselineSnapshots.set(item.updatedPart.id, {
+                                codigo: item.updatedPart.codigo.trim(),
+                                descripcion: item.updatedPart.descripcion.trim(),
+                                categoria: item.updatedPart.categoria.trim(),
+                                observaciones: item.updatedPart.observaciones.trim()
+                            });
+                            savedCount++;
+                        }
+                    }),
+                    ...newDraftsToPersist.map(async item => {
+                        const ok = await persistPartRecord(
+                            item.newPart,
+                            item.attached ? item.attached.data : null,
+                            item.attached ? item.attached.name : null
+                        );
+                        if (ok) {
+                            delete pendingRowFiles[item.draftId];
+                            allParts.push(item.newPart);
+                            baselineSnapshots.set(item.newPart.id, {
+                                codigo: item.newPart.codigo.trim(),
+                                descripcion: item.newPart.descripcion.trim(),
+                                categoria: item.newPart.categoria.trim(),
+                                observaciones: item.newPart.observaciones.trim()
+                            });
+                            savedCount++;
+                        }
+                    })
+                ]);
+
+                allParts.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+                draftRows = remainingDrafts.length > 0 ? remainingDrafts : [{
+                    id: 'draft-' + Date.now(), codigo: '', descripcion: '', categoria: '', observaciones: ''
+                }];
+
+                renderDraftRows();
+                renderPartsTable();
+                updatePendingChangesIndicator();
+                showSavedPopup();
+
+                if (skippedDuplicates > 0) {
+                    showToast(`${skippedDuplicates} duplicado(s) omitido(s).`);
+                }
+            } catch (err) {
+                showToast('Error al guardar: ' + err.message);
+            }
+        }
+
+        function setupPageAndRowDragAndDrop() {
+            const root = document.getElementById('page-drop-root');
+            const banner = document.getElementById('page-drop-banner');
+            const targetLabel = document.getElementById('page-drop-target-label');
+            let dragCounter = 0;
+
+            root.addEventListener('dragenter', e => {
+                if (!isAdmin) return;
+                if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return;
+                e.preventDefault();
+                dragCounter++;
+                banner.classList.remove('hidden');
+            });
+
+            root.addEventListener('dragover', e => {
+                if (!isAdmin) return;
+                if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return;
+                e.preventDefault();
+                const row = e.target.closest('tr[data-part-id]');
+                document.querySelectorAll('tr[data-part-id]').forEach(r => r.classList.remove('row-drop-active'));
+                if (row) {
+                    row.classList.add('row-drop-active');
+                    targetLabel.textContent = `Soltar 3D en fila: ${row.dataset.partCode || row.dataset.partId}`;
+                } else {
+                    targetLabel.textContent = 'Mueve el cursor sobre la fila o suelta aquí para agregar al listado';
+                }
+            });
+
+            root.addEventListener('dragleave', () => {
+                if (!isAdmin) return;
+                dragCounter--;
+                if (dragCounter <= 0) {
+                    dragCounter = 0;
+                    banner.classList.add('hidden');
+                    document.querySelectorAll('tr[data-part-id]').forEach(r => r.classList.remove('row-drop-active'));
+                }
+            });
+
+            root.addEventListener('drop', async e => {
+                if (!isAdmin) return;
+                if (!e.dataTransfer || !e.dataTransfer.files || e.dataTransfer.files.length === 0) return;
+                e.preventDefault();
+                dragCounter = 0;
+                banner.classList.add('hidden');
+                const droppedRow = e.target.closest('tr[data-part-id]');
+                document.querySelectorAll('tr[data-part-id]').forEach(r => r.classList.remove('row-drop-active'));
+
+                const files = Array.from(e.dataTransfer.files);
+                if (droppedRow) {
+                    const partId = droppedRow.dataset.partId;
+                    const buf = await files[0].arrayBuffer();
+                    pendingRowFiles[partId] = { name: files[0].name, size: buf.byteLength, data: buf };
+                    renderPartsTable();
+                    updatePendingChangesIndicator();
+                    showToast(`3D asignado a la fila (${files[0].name}). Pulsa Guardar para confirmar.`);
+                } else {
+                    syncDraftInputsFromDOM();
+                    const knownCodes = getKnownCodeKeys();
+                    let added = 0;
+                    let skipped = 0;
+
+                    for (const file of files) {
+                        const candidateCode = file.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
+                        const key = normalizeCodeKey(candidateCode);
+                        if (key && knownCodes.has(key)) { skipped++; continue; }
+                        if (key) knownCodes.add(key);
+
+                        const buf = await file.arrayBuffer();
+                        const rowId = 'draft-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+                        draftRows.push({
+                            id: rowId,
+                            codigo: candidateCode,
+                            descripcion: file.name.replace(/\.[^/.]+$/, ''),
+                            categoria: '',
+                            observaciones: ''
+                        });
+                        pendingRowFiles[rowId] = { name: file.name, size: buf.byteLength, data: buf };
+                        added++;
+                    }
+                    renderDraftRows();
+                    updatePendingChangesIndicator();
+                    showToast(skipped > 0
+                        ? `Agregados ${added}; ${skipped} duplicado(s) omitido(s) por código.`
+                        : `${added} archivo(s) agregados al listado. Pulsa Guardar para confirmar.`);
+                }
+            });
+        }
+
+        function renderPartsTable() {
+            const tbody = document.getElementById('parts-table-body');
+            const emptyState = document.getElementById('empty-state');
+            const terms = [];
+            for (let i = 1; i <= 5; i++) {
+                const v = document.getElementById(`multi-search-${i}`).value.trim();
+                if (v) terms.push(normalizeText(v));
+            }
+
+            let filtered = allParts;
+            if (terms.length > 0) {
+                filtered = allParts.filter(part => {
+                    const hay = part._searchNorm || normalizeText([
+                        part.codigo, part.descripcion, part.categoria, part.observaciones,
+                        part.iptFile ? part.iptFile.name : ''
+                    ].join(' '));
+                    for (let i = 0; i < terms.length; i++) {
+                        if (!hay.includes(terms[i])) return false;
+                    }
+                    return true;
+                });
+            }
+
+            document.getElementById('items-count').textContent = filtered.length;
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            const frag = document.createDocumentFragment();
+            filtered.forEach(part => {
+                const pendingFile = pendingRowFiles[part.id];
+                const has3D = partHas3D(part);
+                const btn3DClasses = has3D
+                    ? 'bg-[#1da1f2] hover:bg-[#1488d1] text-white cursor-pointer'
+                    : 'bg-[#1e2227] text-[#7d8692] border border-[#353b42] opacity-50 cursor-not-allowed';
+                const btn3DTitle = has3D ? 'Abrir visor 3D' : 'Sin archivo 3D cargado';
+
+                const tr = document.createElement('tr');
+                tr.dataset.partId = part.id;
+                tr.dataset.partCode = part.codigo || part.id;
+                tr.className = 'hover:bg-[#2d3238] transition-colors';
+
+                if (isAdmin) {
+                    tr.innerHTML = `
+                        <td class="py-2 px-2.5 whitespace-nowrap">
+                            <input type="text" id="edit-code-${part.id}" value="${escapeHTML(part.codigo)}" class="inline-cell-input font-mono text-[#1da1f2] w-28">
+                        </td>
+                        <td class="py-2 px-2.5 min-w-[180px]">
+                            <input type="text" id="edit-desc-${part.id}" value="${escapeHTML(part.descripcion)}" class="inline-cell-input">
+                        </td>
+                        <td class="py-2 px-2.5 min-w-[140px]">
+                            <input type="text" id="edit-cat-${part.id}" value="${escapeHTML(part.categoria)}" class="inline-cell-input">
+                        </td>
+                        <td class="py-2 px-2.5 min-w-[180px]">
+                            <input type="text" id="edit-obs-${part.id}" value="${escapeHTML(part.observaciones || '')}" class="inline-cell-input text-[#aeb6c2]">
+                        </td>
+                        <td class="py-2 px-2.5 whitespace-nowrap text-center">
+                            <div class="inline-flex items-center gap-1">
+                                <button type="button" ${has3D ? `onclick="openViewerModal('${part.id}')"` : 'disabled'} title="${btn3DTitle}" class="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded font-mono font-bold text-xs transition ${btn3DClasses}">
+                                    <i class="fa-solid fa-cube"></i><span>3D</span>
+                                </button>
+                                <label title="${pendingFile ? 'Pendiente: ' + escapeHTML(pendingFile.name) : 'Agregar o cambiar 3D (.ipt)'}" class="cursor-pointer px-2 py-1 rounded ${pendingFile ? 'bg-[#1da1f2]/25 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-amber-400'} border text-xs font-bold transition inline-flex items-center">
+                                    <i class="fa-solid fa-plus"></i>
+                                    <input type="file" accept=".ipt" class="hidden" onchange="onTableRowFileSelected('${part.id}', event)">
+                                </label>
+                            </div>
+                        </td>
+                        <td class="py-2 px-2.5 whitespace-nowrap text-right">
+                            <button onclick="confirmDeletePart('${part.id}')" title="Eliminar ítem" class="px-2 py-1 rounded bg-[#1e2227] hover:bg-red-950/60 text-[#aeb6c2] hover:text-red-400 text-xs transition">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                } else {
+                    tr.innerHTML = `
+                        <td class="py-2.5 px-3 whitespace-nowrap font-mono text-xs font-semibold text-[#1da1f2]">${escapeHTML(part.codigo)}</td>
+                        <td class="py-2.5 px-3 text-[#e2e6ec] font-medium">${escapeHTML(part.descripcion)}</td>
+                        <td class="py-2.5 px-3 whitespace-nowrap text-[#cfd5de]">${escapeHTML(part.categoria)}</td>
+                        <td class="py-2.5 px-3 max-w-md text-[#9aa2ad]">${escapeHTML(part.observaciones || '—')}</td>
+                        <td class="py-2.5 px-3 whitespace-nowrap text-center">
+                            <button type="button" ${has3D ? `onclick="openViewerModal('${part.id}')"` : 'disabled'} title="${btn3DTitle}" class="inline-flex items-center justify-center gap-1 px-3 py-1 rounded font-mono font-bold text-xs transition ${btn3DClasses}">
+                                <i class="fa-solid fa-cube"></i><span>3D</span>
+                            </button>
+                        </td>
+                    `;
+                }
+                frag.appendChild(tr);
+            });
+
+            tbody.innerHTML = '';
+            tbody.appendChild(frag);
+        }
+
+        function handleAuthClick() {
+            if (isAdmin) { isAdmin = false; updateAuthUI(); showToast('Modo lectura activo.'); }
+            else {
+                document.getElementById('admin-password-input').value = '';
+                document.getElementById('auth-error-msg').classList.add('hidden');
+                document.getElementById('auth-modal').classList.remove('hidden');
+            }
+        }
+
+        function closeAuthModal() { document.getElementById('auth-modal').classList.add('hidden'); }
+
+        function verifyAdminPassword(e) {
+            e.preventDefault();
+            if (document.getElementById('admin-password-input').value === ADMIN_SECRET) {
+                isAdmin = true;
+                if (draftRows.length === 0) addDraftRow();
+                closeAuthModal();
+                updateAuthUI();
+                showToast('Administrador desbloqueado.');
+            } else {
+                document.getElementById('auth-error-msg').classList.remove('hidden');
+            }
+        }
+
+        function updateAuthUI() {
+            document.getElementById('admin-quick-create-panel').classList.toggle('hidden', !isAdmin);
+            document.getElementById('admin-toolbar-actions').classList.toggle('hidden', !isAdmin);
+            document.getElementById('admin-toolbar-actions').classList.toggle('flex', isAdmin);
+            document.getElementById('admin-actions-th').classList.toggle('hidden', !isAdmin);
+            document.getElementById('auth-btn-text').textContent = isAdmin ? 'Salir Admin' : 'Admin';
+            document.getElementById('role-badge').innerHTML = isAdmin
+                ? '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span class="text-amber-300 font-semibold">Admin</span>'
+                : '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span>Lectura</span>';
+            if (isAdmin) renderDraftRows();
+            if (currentViewingPart) updateModalAdminPermissions();
+            renderPartsTable();
+            updatePendingChangesIndicator();
+        }
+
+        function initThreeViewer() {
+            const container = document.getElementById('viewer-canvas-container');
+            if (renderer) return;
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x16191d);
+            camera = new THREE.PerspectiveCamera(45, (container.clientWidth || 600) / (container.clientHeight || 420), 0.1, 5000);
+            camera.position.set(110, 85, 110);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(container.clientWidth || 600, container.clientHeight || 420);
+            container.appendChild(renderer.domElement);
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+            const dl = new THREE.DirectionalLight(0xffffff, 0.95);
+            dl.position.set(100, 150, 100);
+            scene.add(dl);
+            gridHelper = new THREE.GridHelper(200, 20, 0x1da1f2, 0x2f353d);
+            gridHelper.position.y = -25;
+            scene.add(gridHelper);
+            (function loop() {
+                requestAnimationFrame(loop);
+                if (isAutoRotating && currentMeshGroup) currentMeshGroup.rotation.y += 0.008;
+                controls.update();
+                renderer.render(scene, camera);
+            })();
+            window.addEventListener('resize', resizeThreeViewer);
+        }
+
+        function resizeThreeViewer() {
+            const container = document.getElementById('viewer-canvas-container');
+            if (!renderer || !camera || !container || document.getElementById('viewer-modal').classList.contains('hidden')) return;
+            if (container.clientWidth > 0 && container.clientHeight > 0) {
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            }
+        }
+
+        function finalizeLoaded3DGroup(group) {
+            if (currentMeshGroup) { scene.remove(currentMeshGroup); currentMeshGroup = null; }
+            const box = new THREE.Box3().setFromObject(group);
+            const size = box.getSize(new THREE.Vector3());
+            const maxDim = Math.max(size.x, size.y, size.z) || 1;
+            group.scale.setScalar(70 / maxDim);
+            const centeredBox = new THREE.Box3().setFromObject(group);
+            const center = centeredBox.getCenter(new THREE.Vector3());
+            group.position.sub(center);
+            group.traverse(child => {
+                if (child.isMesh && child.material) {
+                    if (Array.isArray(child.material)) child.material.forEach(m => m.wireframe = isWireframe);
+                    else child.material.wireframe = isWireframe;
+                }
+            });
+            currentMeshGroup = group;
+            scene.add(currentMeshGroup);
+            resetCameraView();
+        }
+
+        async function tryLoadPreviewFromParallelService(part) {
+            if (currentMeshGroup) { scene.remove(currentMeshGroup); currentMeshGroup = null; }
+            const notice = document.getElementById('ipt-native-notice');
+            document.getElementById('notice-ipt-name').textContent = part.iptFile ? part.iptFile.name : 'archivo';
+
+            if (!IPT_PREVIEW_ENDPOINT || !part.iptFile || !part.iptFile.data) {
+                notice.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('file', new Blob([part.iptFile.data], { type: 'application/octet-stream' }), part.iptFile.name);
+                formData.append('partId', part.id);
+                formData.append('code', part.codigo || '');
+
+                const res = await fetch(IPT_PREVIEW_ENDPOINT, { method: 'POST', body: formData });
+                if (!res.ok) throw new Error('Servicio no disponible');
+
+                const format = (res.headers.get('X-Preview-Format') || 'glb').toLowerCase();
+                const buffer = await res.arrayBuffer();
+                notice.classList.add('hidden');
+
+                if (format === 'stl' && THREE.STLLoader) {
+                    const geom = new THREE.STLLoader().parse(buffer);
+                    geom.computeVertexNormals();
+                    const g = new THREE.Group();
+                    g.add(new THREE.Mesh(geom, new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.55, roughness: 0.35 })));
+                    finalizeLoaded3DGroup(g);
+                } else if (format === 'obj' && THREE.OBJLoader) {
+                    finalizeLoaded3DGroup(new THREE.OBJLoader().parse(new TextDecoder().decode(buffer)));
+                } else if (THREE.GLTFLoader) {
+                    new THREE.GLTFLoader().parse(buffer, '', gltf => finalizeLoaded3DGroup(gltf.scene), () => notice.classList.remove('hidden'));
+                }
+            } catch (_) {
+                notice.classList.remove('hidden');
+            }
+        }
+
+        function resetCameraView() { if (camera && controls) { camera.position.set(95, 75, 95); controls.target.set(0, 0, 0); controls.update(); } }
+        function toggleWireframe() { isWireframe = !isWireframe; if (currentMeshGroup) currentMeshGroup.traverse(c => { if (c.isMesh) c.material.wireframe = isWireframe; }); }
+        function toggleGridHelper() { if (gridHelper) gridHelper.visible = !gridHelper.visible; }
+        function toggleAutoRotate() { isAutoRotating = !isAutoRotating; }
+
+        async function openViewerModal(partId) {
+            const part = allParts.find(p => p.id === partId);
+            if (!part || !partHas3D(part)) return;
+
+            currentViewingPart = part;
+            document.getElementById('modal-part-code').textContent = part.codigo || 'SIN-COD';
+            document.getElementById('modal-part-name').textContent = part.descripcion || 'Sin descripción';
+            document.getElementById('modal-part-category').textContent = part.categoria || '-';
+            document.getElementById('modal-part-date').textContent = part.date || '-';
+            document.getElementById('modal-part-notes').textContent = part.observaciones || '-';
+            updateModalAdminPermissions();
+            document.getElementById('viewer-modal').classList.remove('hidden');
+
+            if (isSupabaseConnected && supabaseClient && part.iptFile && part.iptFile.storagePath && !part.iptFile.data) {
+                const { data, error } = await supabaseClient.storage.from(SB_BUCKET).download(part.iptFile.storagePath);
+                if (!error && data) part.iptFile.data = await data.arrayBuffer();
+            }
+            updateIptFileCardUI(part);
+            setTimeout(() => { initThreeViewer(); resizeThreeViewer(); tryLoadPreviewFromParallelService(part); }, 20);
+        }
+
+        function closeViewerModal() {
+            document.getElementById('viewer-modal').classList.add('hidden');
+            currentViewingPart = null;
+            if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+        }
+
+        function updateModalAdminPermissions() {
+            document.getElementById('modal-admin-footer').classList.toggle('hidden', !isAdmin);
+        }
+
+        function updateIptFileCardUI(part) {
+            const card = document.getElementById('ipt-draggable-card');
+            if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
+
+            if (part.iptFile && part.iptFile.data) {
+                const fileName = part.iptFile.name;
+                document.getElementById('ipt-filename-display').textContent = fileName;
+                document.getElementById('ipt-filesize-display').textContent = formatBytes(part.iptFile.size);
+                card.classList.remove('opacity-50', 'pointer-events-none');
+                const blob = new Blob([part.iptFile.data], { type: 'application/octet-stream' });
+                currentBlobUrl = URL.createObjectURL(blob);
+                card.ondragstart = ev => {
+                    ev.dataTransfer.setData('DownloadURL', `application/octet-stream:${fileName}:${currentBlobUrl}`);
+                    ev.dataTransfer.effectAllowed = 'copy';
+                };
+            } else {
+                document.getElementById('ipt-filename-display').textContent = 'Pendiente de cargar (.ipt)';
+                document.getElementById('ipt-filesize-display').textContent = '0 KB';
+                card.classList.add('opacity-50', 'pointer-events-none');
+                card.ondragstart = null;
+            }
+        }
+
+        function downloadCurrentIptFile() {
+            if (!currentViewingPart || !currentViewingPart.iptFile || !currentViewingPart.iptFile.data) return;
+            const blob = new Blob([currentViewingPart.iptFile.data], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = currentViewingPart.iptFile.name;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        function deleteCurrentModalItem() { if (currentViewingPart && isAdmin) confirmDeletePart(currentViewingPart.id); }
+
+        function confirmDeletePart(partId) {
+            if (!isAdmin) return;
+            const p = allParts.find(x => x.id === partId);
+            if (!p) return;
+            openConfirmModal('Eliminar Ítem', `¿Eliminar "${p.codigo || partId}"?`, async () => {
+                await removePartRecord(p);
+                allParts = allParts.filter(x => x.id !== partId);
+                baselineSnapshots.delete(partId);
+                delete pendingRowFiles[partId];
+                if (currentViewingPart && currentViewingPart.id === partId) closeViewerModal();
+                renderPartsTable();
+                updatePendingChangesIndicator();
+                showToast('Eliminado.');
+            });
+        }
+
+        async function exportDatabaseJSON() {
+            if (!isAdmin) return;
+            const parts = allParts.map(p => {
+                const { _searchNorm, ...clean } = p;
+                if (clean.iptFile && clean.iptFile.data) {
+                    clean.iptFile = { name: clean.iptFile.name, size: clean.iptFile.size, type: clean.iptFile.type, base64Data: arrayBufferToBase64(clean.iptFile.data) };
+                }
+                return clean;
+            });
+            const blob = new Blob([JSON.stringify({ parts }, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = 'DataWaves_Backup.json'; a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+
+        async function importDatabaseJSON(e) {
+            if (!isAdmin || !e.target.files[0]) return;
+            const parsed = JSON.parse(await e.target.files[0].text());
+            const existingKeys = new Set(allParts.map(p => normalizeCodeKey(p.codigo)).filter(Boolean));
+            for (const item of (parsed.parts || [])) {
+                const k = normalizeCodeKey(item.codigo);
+                if (k && existingKeys.has(k)) continue;
+                if (k) existingKeys.add(k);
+                if (item.iptFile && item.iptFile.base64Data) { item.iptFile.data = base64ToArrayBuffer(item.iptFile.base64Data); delete item.iptFile.base64Data; }
+                await persistPartRecord(item);
+            }
+            allParts = await fetchAllParts(true);
+            renderPartsTable();
+            e.target.value = '';
+        }
+
+        function openConfirmModal(title, msg, cb) {
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = msg;
+            confirmCallback = cb;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() { document.getElementById('confirm-modal').classList.add('hidden'); confirmCallback = null; }
+
+        document.getElementById('confirm-accept-btn').addEventListener('click', async () => {
+            if (confirmCallback) await confirmCallback();
+            closeConfirmModal();
+        });
+
+        function showToast(msg) {
+            const c = document.getElementById('toast-container');
+            const d = document.createElement('div');
+            d.className = 'px-3.5 py-2.5 rounded border bg-[#23272c] border-[#1da1f2]/60 text-[#e2e6ec] shadow-xl text-xs font-medium';
+            d.textContent = msg;
+            c.appendChild(d);
+            setTimeout(() => d.remove(), 3200);
+        }
+
+        function formatBytes(bytes) {
+            if (!bytes) return '0 Bytes';
+            const k = 1024, s = ['Bytes', 'KB', 'MB', 'GB'], i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + s[i];
+        }
+
+        function escapeHTML(str) {
+            return !str ? '' : String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        function arrayBufferToBase64(buf) {
+            let bin = ''; const b = new Uint8Array(buf);
+            for (let i = 0; i < b.byteLength; i++) bin += String.fromCharCode(b[i]);
+            return window.btoa(bin);
+        }
+
+        function base64ToArrayBuffer(b64) {
+            const bin = window.atob(b64); const b = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+            return b.buffer;
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            await initIndexedDB();
+            draftRows = [{ id: 'draft-' + Date.now(), codigo: '', descripcion: '', categoria: '', observaciones: '' }];
+            allParts = initSupabase() ? await fetchAllParts() : [];
+            renderPartsTable();
+            setupPageAndRowDragAndDrop();
+
+            const tbody = document.getElementById('parts-table-body');
+            tbody.addEventListener('input', e => {
+                if (e.target && e.target.matches('input.inline-cell-input')) {
+                    const row = e.target.closest('tr[data-part-id]');
+                    const partId = row && row.dataset.partId;
+                    const part = partId && allParts.find(x => x.id === partId);
+                    const snap = part && baselineSnapshots.get(partId);
+                    if (snap) {
+                        const curCode = document.getElementById(`edit-code-${partId}`)?.value.trim() ?? '';
+                        const curDesc = document.getElementById(`edit-desc-${partId}`)?.value.trim() ?? '';
+                        const curCat = document.getElementById(`edit-cat-${partId}`)?.value.trim() ?? '';
+                        const curObs = document.getElementById(`edit-obs-${partId}`)?.value.trim() ?? '';
+                        document.getElementById(`edit-code-${partId}`)?.classList.toggle('cell-changed', curCode !== snap.codigo);
+                        document.getElementById(`edit-desc-${partId}`)?.classList.toggle('cell-changed', curDesc !== snap.descripcion);
+                        document.getElementById(`edit-cat-${partId}`)?.classList.toggle('cell-changed', curCat !== snap.categoria);
+                        document.getElementById(`edit-obs-${partId}`)?.classList.toggle('cell-changed', curObs !== snap.observaciones);
+                    }
+                    updatePendingChangesIndicator();
+                }
+            });
+
+            document.querySelectorAll('.multi-search-input').forEach(inp => {
+                inp.addEventListener('input', () => {
+                    clearTimeout(filterDebounceTimer);
+                    filterDebounceTimer = setTimeout(renderPartsTable, 120);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
