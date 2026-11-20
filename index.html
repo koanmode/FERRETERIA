@@ -290,6 +290,22 @@
 
                     <div class="relative flex-1 w-full h-full select-none">
                         <div id="viewer-canvas-container" class="w-full h-full min-h-[380px]"></div>
+
+                        <!-- Aviso claro cuando el archivo es .IPT nativo sin malla convertida -->
+                        <div id="viewer-no-mesh-overlay" class="hidden absolute inset-0 flex items-center justify-center p-6 pointer-events-none">
+                            <div class="max-w-md bg-[#23272c]/95 border border-[#3a4048] rounded-md p-5 text-center shadow-2xl pointer-events-auto">
+                                <div class="w-11 h-11 rounded-full bg-[#1da1f2]/15 border border-[#1da1f2]/40 text-[#1da1f2] flex items-center justify-center mx-auto mb-3 text-lg">
+                                    <i class="fa-solid fa-cube"></i>
+                                </div>
+                                <h4 class="text-sm font-bold text-white">Archivo nativo .IPT sin vista previa 3D</h4>
+                                <p class="text-xs text-[#aeb6c2] mt-1.5 leading-relaxed">
+                                    El navegador no lee la geometría interna de archivos propietarios <code class="text-[#1da1f2]">.ipt</code>. Podés descargar el original intacto desde el panel derecho.
+                                </p>
+                                <p id="viewer-no-mesh-admin-hint" class="hidden text-[11px] text-emerald-300/90 mt-2.5 pt-2.5 border-t border-[#343a42]">
+                                    En modo Admin, usá <strong>Convertir</strong> para pasarlo a <code class="font-mono">.stl / .obj / .glb</code> y luego <strong>Cargar 3D</strong> para visualizar la pieza real.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="px-3.5 py-2 bg-[#22262b] border-t border-[#3a4048] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#9aa2ad]">
@@ -427,6 +443,13 @@
             if (!part) return false;
             if (pendingRowFiles[part.id]) return true;
             return Boolean(part.iptFile && (part.iptFile.data || part.iptFile.storagePath));
+        }
+
+        function setNoMeshOverlay(visible) {
+            const overlay = document.getElementById('viewer-no-mesh-overlay');
+            const adminHint = document.getElementById('viewer-no-mesh-admin-hint');
+            if (overlay) overlay.classList.toggle('hidden', !visible);
+            if (adminHint) adminHint.classList.toggle('hidden', !isAdmin);
         }
 
         function showSavedPopup() {
@@ -1254,7 +1277,13 @@
                 ? '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span class="text-amber-300 font-semibold">Admin</span>'
                 : '<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span><span>Lectura</span>';
             if (isAdmin) renderDraftRows();
-            if (currentViewingPart) updateModalAdminPermissions();
+            if (currentViewingPart) {
+                updateModalAdminPermissions();
+                const overlay = document.getElementById('viewer-no-mesh-overlay');
+                if (overlay && !overlay.classList.contains('hidden')) {
+                    setNoMeshOverlay(true);
+                }
+            }
             renderPartsTable();
             updatePendingChangesIndicator();
         }
@@ -1329,6 +1358,7 @@
         }
 
         function finalizeLoaded3DGroup(group) {
+            setNoMeshOverlay(false);
             if (currentMeshGroup) { scene.remove(currentMeshGroup); currentMeshGroup = null; }
             const box = new THREE.Box3().setFromObject(group);
             const size = box.getSize(new THREE.Vector3());
@@ -1367,30 +1397,6 @@
             currentMeshGroup = group;
             scene.add(currentMeshGroup);
             resetCameraView();
-        }
-
-        function renderIptFallbackPreview(part) {
-            const hexGeo = new THREE.CylinderGeometry(18, 18, 28, 6, 1, false);
-            const mat = new THREE.MeshStandardMaterial({
-                color: 0x3b82f6,
-                metalness: 0.45,
-                roughness: 0.35,
-                flatShading: true
-            });
-            const mesh = new THREE.Mesh(hexGeo, mat);
-            const edges = new THREE.EdgesGeometry(hexGeo, 25);
-            const lines = new THREE.LineSegments(
-                edges,
-                new THREE.LineBasicMaterial({ color: 0xe2e8f0 })
-            );
-            mesh.add(lines);
-
-            const group = new THREE.Group();
-            group.add(mesh);
-            finalizeLoaded3DGroup(group);
-
-            const label = (part && (part.codigo || part.descripcion)) || 'pieza .ipt';
-            showToast(`Vista previa de referencia para "${label}". El archivo descargable sigue siendo el .IPT original.`);
         }
 
         function renderBufferByFormat(buffer, format) {
@@ -1432,8 +1438,13 @@
 
         async function load3DModelIntoViewer(part) {
             if (currentMeshGroup) { scene.remove(currentMeshGroup); currentMeshGroup = null; }
+            setNoMeshOverlay(false);
+
             const activeFile = pendingRowFiles[part.id] || part.iptFile;
-            if (!activeFile || !activeFile.data) return;
+            if (!activeFile || !activeFile.data) {
+                setNoMeshOverlay(true);
+                return;
+            }
 
             const ext = (activeFile.name.split('.').pop() || '').toLowerCase();
             if (renderBufferByFormat(activeFile.data, ext)) return;
@@ -1454,9 +1465,8 @@
                 } catch (_) {}
             }
 
-            if (ext === 'ipt') {
-                renderIptFallbackPreview(part);
-            }
+            // Sin endpoint externo y siendo .ipt nativo sin malla asociada, mostramos el aviso limpio sin dibujar figuras falsas
+            setNoMeshOverlay(true);
         }
 
         function openExternalConverterForPart() {
@@ -1549,6 +1559,7 @@
 
         function closeViewerModal() {
             document.getElementById('viewer-modal').classList.add('hidden');
+            setNoMeshOverlay(false);
             currentViewingPart = null;
             if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
         }
@@ -1565,7 +1576,7 @@
         function updateIptFileCardUI(part) {
             const card = document.getElementById('ipt-draggable-card');
             if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); currentBlobUrl = null; }
-            const activeFile = pendingRowFiles[part.id] || part.iptFile;
+            const activeFile = part.originalIptFile || pendingRowFiles[part.id] || part.iptFile;
 
             if (activeFile && activeFile.data) {
                 const fileName = activeFile.name;
@@ -1732,9 +1743,3 @@
     </script>
 </body>
 </html>
-```[cite: 1]
-
-### Cómo probarlo
-1. Reemplazá tu `index.html` con este código, guardá (`Ctrl + S`) y actualizá el navegador con `Ctrl + F5` (o subilo a tu repo/Vercel si probás en línea)[cite: 1].
-2. En **Lectura**, abrí el botón **3D** de una pieza `.ipt`: verás la vista previa de referencia con aristas marcadas y los botones **Convertir** y **Cargar 3D** no aparecerán[cite: 1].
-3. Activá **Admin** (`datawaves`) y abrí el visor: verás **Convertir** y **Cargar 3D**[cite: 1]. Si cargás un `.stl`, `.obj` o `.glb`, se dibujará en el visor y quedará listo para guardar sin alterar el `.ipt` original[cite: 1].
