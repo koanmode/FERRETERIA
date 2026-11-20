@@ -326,6 +326,16 @@
                             <button onclick="downloadCurrentIptFile()" class="w-full mt-2 flex items-center justify-center gap-2 px-3 py-1.5 rounded bg-[#1da1f2] hover:bg-[#1488d1] text-white font-semibold text-xs transition">
                                 <i class="fa-solid fa-download"></i> Descargar Archivo Original
                             </button>
+
+                            <div id="viewer-admin-convert-actions" class="hidden grid-cols-2 gap-2 mt-2">
+                                <button type="button" onclick="openExternalConverterForPart()" class="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-white font-semibold text-xs transition">
+                                    <i class="fa-solid fa-arrow-up-right-from-square text-[#1da1f2]"></i> Convertir
+                                </button>
+                                <label class="cursor-pointer flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-[#252a30] hover:bg-[#2f353d] border border-[#383e47] text-[#e2e6ec] font-medium text-xs transition">
+                                    <i class="fa-solid fa-file-import text-emerald-400"></i> Cargar 3D
+                                    <input type="file" id="viewer-import-converted-input" accept=".stl,.obj,.glb,.gltf" class="hidden" onchange="handleViewerConvertedFile(event)">
+                                </label>
+                            </div>
                         </div>
 
                         <div class="bg-[#1e2227] border border-[#353b42] rounded p-3 space-y-2 text-xs">
@@ -387,6 +397,7 @@
         const DEFAULT_SUPABASE_URL = 'https://sksanvauywgjxmxujicl.supabase.co';
         const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_2fuRdNLrO24nN5HA6e8lmw_v6IYVleX';
         const IPT_PREVIEW_ENDPOINT = '';
+        const EXTERNAL_CONVERTER_URL = 'https://www.cadprops.com/';
 
         const DB_NAME = 'DataWaves_CAD_IPT_DB_V15';
         const DB_VERSION = 1;
@@ -1270,7 +1281,6 @@
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
             container.appendChild(renderer.domElement);
 
-            // Mapa de reflejos de estudio para fidelidad metálica y superficial
             if (THREE.PMREMGenerator && THREE.RoomEnvironment) {
                 const pmrem = new THREE.PMREMGenerator(renderer);
                 const envRT = pmrem.fromScene(new THREE.RoomEnvironment(), 0.04);
@@ -1359,6 +1369,30 @@
             resetCameraView();
         }
 
+        function renderIptFallbackPreview(part) {
+            const hexGeo = new THREE.CylinderGeometry(18, 18, 28, 6, 1, false);
+            const mat = new THREE.MeshStandardMaterial({
+                color: 0x3b82f6,
+                metalness: 0.45,
+                roughness: 0.35,
+                flatShading: true
+            });
+            const mesh = new THREE.Mesh(hexGeo, mat);
+            const edges = new THREE.EdgesGeometry(hexGeo, 25);
+            const lines = new THREE.LineSegments(
+                edges,
+                new THREE.LineBasicMaterial({ color: 0xe2e8f0 })
+            );
+            mesh.add(lines);
+
+            const group = new THREE.Group();
+            group.add(mesh);
+            finalizeLoaded3DGroup(group);
+
+            const label = (part && (part.codigo || part.descripcion)) || 'pieza .ipt';
+            showToast(`Vista previa de referencia para "${label}". El archivo descargable sigue siendo el .IPT original.`);
+        }
+
         function renderBufferByFormat(buffer, format) {
             if (format === 'stl' && THREE.STLLoader) {
                 const geom = new THREE.STLLoader().parse(buffer);
@@ -1404,19 +1438,64 @@
             const ext = (activeFile.name.split('.').pop() || '').toLowerCase();
             if (renderBufferByFormat(activeFile.data, ext)) return;
 
-            if (!IPT_PREVIEW_ENDPOINT) return;
-            try {
-                const formData = new FormData();
-                formData.append('file', new Blob([activeFile.data], { type: 'application/octet-stream' }), activeFile.name);
-                formData.append('partId', part.id);
-                formData.append('code', part.codigo || '');
+            if (IPT_PREVIEW_ENDPOINT) {
+                try {
+                    const formData = new FormData();
+                    formData.append('file', new Blob([activeFile.data], { type: 'application/octet-stream' }), activeFile.name);
+                    formData.append('partId', part.id);
+                    formData.append('code', part.codigo || '');
 
-                const res = await fetch(IPT_PREVIEW_ENDPOINT, { method: 'POST', body: formData });
-                if (!res.ok) return;
-                const format = (res.headers.get('X-Preview-Format') || 'glb').toLowerCase();
-                const buffer = await res.arrayBuffer();
-                renderBufferByFormat(buffer, format);
-            } catch (_) {}
+                    const res = await fetch(IPT_PREVIEW_ENDPOINT, { method: 'POST', body: formData });
+                    if (res.ok) {
+                        const format = (res.headers.get('X-Preview-Format') || 'glb').toLowerCase();
+                        const buffer = await res.arrayBuffer();
+                        if (renderBufferByFormat(buffer, format)) return;
+                    }
+                } catch (_) {}
+            }
+
+            if (ext === 'ipt') {
+                renderIptFallbackPreview(part);
+            }
+        }
+
+        function openExternalConverterForPart() {
+            if (!isAdmin || !currentViewingPart) return;
+            downloadCurrentIptFile();
+            window.open(EXTERNAL_CONVERTER_URL, '_blank', 'noopener,noreferrer');
+            showToast('Se descargó el .IPT original. Convertilo en la otra pestaña y usá "Cargar 3D" al volver.');
+        }
+
+        async function handleViewerConvertedFile(event) {
+            const input = event && event.target;
+            const file = input && input.files && input.files[0];
+            if (!isAdmin || !file || !currentViewingPart) return;
+
+            try {
+                const buf = await file.arrayBuffer();
+                if (
+                    !currentViewingPart.originalIptFile &&
+                    currentViewingPart.iptFile &&
+                    /\.ipt$/i.test(currentViewingPart.iptFile.name || '')
+                ) {
+                    currentViewingPart.originalIptFile = currentViewingPart.iptFile;
+                }
+
+                pendingRowFiles[currentViewingPart.id] = {
+                    name: file.name,
+                    size: buf.byteLength,
+                    data: buf
+                };
+
+                const ext = (file.name.split('.').pop() || '').toLowerCase();
+                renderBufferByFormat(buf, ext);
+                updateIptFileCardUI(currentViewingPart);
+                renderPartsTable();
+                updatePendingChangesIndicator();
+                showToast(`Vista previa "${file.name}" cargada. Recordá pulsar Guardar si querés conservarla.`);
+            } finally {
+                if (input) input.value = '';
+            }
         }
 
         function resetCameraView() {
@@ -1476,6 +1555,11 @@
 
         function updateModalAdminPermissions() {
             document.getElementById('modal-admin-footer').classList.toggle('hidden', !isAdmin);
+            const convertActions = document.getElementById('viewer-admin-convert-actions');
+            if (convertActions) {
+                convertActions.classList.toggle('hidden', !isAdmin);
+                convertActions.classList.toggle('grid', isAdmin);
+            }
         }
 
         function updateIptFileCardUI(part) {
@@ -1506,12 +1590,12 @@
 
         function downloadCurrentIptFile() {
             if (!currentViewingPart) return;
-            const activeFile = pendingRowFiles[currentViewingPart.id] || currentViewingPart.iptFile;
-            if (!activeFile || !activeFile.data) return;
-            const blob = new Blob([activeFile.data], { type: 'application/octet-stream' });
+            const downloadSource = currentViewingPart.originalIptFile || pendingRowFiles[currentViewingPart.id] || currentViewingPart.iptFile;
+            if (!downloadSource || !downloadSource.data) return;
+            const blob = new Blob([downloadSource.data], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url; a.download = activeFile.name;
+            a.href = url; a.download = downloadSource.name;
             document.body.appendChild(a); a.click(); document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
@@ -1648,3 +1732,9 @@
     </script>
 </body>
 </html>
+```[cite: 1]
+
+### Cómo probarlo
+1. Reemplazá tu `index.html` con este código, guardá (`Ctrl + S`) y actualizá el navegador con `Ctrl + F5` (o subilo a tu repo/Vercel si probás en línea)[cite: 1].
+2. En **Lectura**, abrí el botón **3D** de una pieza `.ipt`: verás la vista previa de referencia con aristas marcadas y los botones **Convertir** y **Cargar 3D** no aparecerán[cite: 1].
+3. Activá **Admin** (`datawaves`) y abrí el visor: verás **Convertir** y **Cargar 3D**[cite: 1]. Si cargás un `.stl`, `.obj` o `.glb`, se dibujará en el visor y quedará listo para guardar sin alterar el `.ipt` original[cite: 1].
