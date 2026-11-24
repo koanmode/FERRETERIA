@@ -63,6 +63,13 @@
             outline: 2px solid #1da1f2;
             outline-offset: -2px;
         }
+        .row-selected {
+            background-color: #263849 !important;
+            box-shadow: inset 3px 0 0 #f59e0b;
+        }
+        .row-selected:hover {
+            background-color: #2b4054 !important;
+        }
         .draggable-ipt-pill {
             cursor: grab;
             user-select: none;
@@ -210,7 +217,7 @@
                     </span>
                 </div>
                 <p class="text-[11px] text-[#9aa2ad]">
-                    Arrastra el botón <code class="text-[#1da1f2]">.ipt</code> directo a tu carpeta local o haz clic para descargarlo.
+                    Haz clic en una fila para resaltarla y arrastra su botón <code class="text-[#1da1f2]">.ipt</code> directo a tu carpeta local.
                 </p>
             </div>
 
@@ -295,6 +302,7 @@
         let draftRows = [];
         let pendingRowFiles = {};
         let isAdmin = false;
+        let selectedPartId = null;
         let confirmCallback = null;
         let savedPopupTimer = null;
         let filterDebounceTimer = null;
@@ -302,6 +310,32 @@
         // Caché en memoria de Blob URLs y descargas en curso para arrastre inmediato
         const blobUrlCache = new Map();
         const inFlightDownloads = new Map();
+
+        function selectPartRow(partId) {
+            if (selectedPartId === partId) return;
+            const prevId = selectedPartId;
+            selectedPartId = partId;
+
+            if (prevId) {
+                const prevRow = document.querySelector(`tr[data-part-id="${prevId}"]`);
+                if (prevRow) {
+                    prevRow.classList.remove('row-selected');
+                    const prevPart = allParts.find(p => p.id === prevId);
+                    const prevCell = prevRow.querySelector('.ipt-cell-slot');
+                    if (prevPart && prevCell) prevCell.innerHTML = buildDraggableIptCellHTML(prevPart);
+                }
+            }
+
+            if (selectedPartId) {
+                const nextRow = document.querySelector(`tr[data-part-id="${selectedPartId}"]`);
+                if (nextRow) {
+                    nextRow.classList.add('row-selected');
+                    const nextPart = allParts.find(p => p.id === selectedPartId);
+                    const nextCell = nextRow.querySelector('.ipt-cell-slot');
+                    if (nextPart && nextCell) nextCell.innerHTML = buildDraggableIptCellHTML(nextPart);
+                }
+            }
+        }
 
         function partHasIptFile(part) {
             if (!part) return false;
@@ -379,7 +413,6 @@
             blobUrlCache.delete(partId);
         }
 
-        // Precarga en segundo plano todos los .ipt al abrir la página para que estén listos al instante
         async function warmUpAllPartBlobs(partsList, concurrency = 4) {
             const pending = partsList.filter(
                 p => p.iptFile && p.iptFile.storagePath && !p.iptFile.data
@@ -397,6 +430,7 @@
         }
 
         function handleIptDragStart(event, partId) {
+            selectPartRow(partId);
             const part = allParts.find(p => p.id === partId);
             if (!part || !partHasIptFile(part)) {
                 event.preventDefault();
@@ -405,7 +439,6 @@
             const active = getActiveIptMeta(part);
             const fileName = (active && active.name) ? active.name : `${part.codigo || 'pieza'}.ipt`;
 
-            // Prioriza Blob local en memoria (instantáneo); si aún bajaba, usa URL directa sin frenar el arrastre
             const dragUrl = getOrCreatePartBlobUrl(part) || getPublicStorageUrl(active && active.storagePath);
             if (!dragUrl) {
                 event.preventDefault();
@@ -422,6 +455,7 @@
         }
 
         async function downloadPartIptFile(partId) {
+            selectPartRow(partId);
             const part = allParts.find(p => p.id === partId);
             if (!part || !partHasIptFile(part)) return;
 
@@ -1153,10 +1187,10 @@
         }
 
         function buildDraggableIptCellHTML(part) {
-            const pendingFile = pendingRowFiles[part.id];
             const hasFile = partHasIptFile(part);
             const activeMeta = getActiveIptMeta(part);
             const fileName = activeMeta && activeMeta.name ? activeMeta.name : `${part.codigo || 'pieza'}.ipt`;
+            const isSelected = selectedPartId === part.id;
 
             if (!hasFile) {
                 return `
@@ -1167,15 +1201,20 @@
                 `;
             }
 
+            const pillClasses = isSelected
+                ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-400 text-amber-300 shadow-sm shadow-amber-500/20'
+                : 'bg-[#1da1f2]/15 hover:bg-[#1da1f2]/30 border-[#1da1f2]/60 hover:border-[#1da1f2] text-[#38b6ff]';
+            const iconClasses = isSelected ? 'text-amber-400' : 'text-[#1da1f2]';
+
             return `
                 <div
                     draggable="true"
                     ondragstart="handleIptDragStart(event, '${part.id}')"
-                    onclick="downloadPartIptFile('${part.id}')"
+                    onclick="event.stopPropagation(); downloadPartIptFile('${part.id}')"
                     title="Arrastrar o descargar: ${escapeHTML(fileName)}"
-                    class="draggable-ipt-pill inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded ${pendingFile ? 'bg-[#1da1f2]/25 border-amber-400 text-[#7cc8fa]' : 'bg-[#1da1f2]/15 hover:bg-[#1da1f2]/30 border-[#1da1f2]/60 hover:border-[#1da1f2] text-[#38b6ff]'} border font-mono text-xs font-semibold transition"
+                    class="draggable-ipt-pill inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded ${pillClasses} border font-mono text-xs font-semibold transition"
                 >
-                    <i class="fa-solid fa-cube text-[#1da1f2] text-xs"></i>
+                    <i class="fa-solid fa-cube ${iconClasses} text-xs transition-colors"></i>
                     <span>.ipt</span>
                 </div>
             `;
@@ -1216,11 +1255,13 @@
             filtered.forEach(part => {
                 const pendingFile = pendingRowFiles[part.id];
                 const iptCellHTML = buildDraggableIptCellHTML(part);
+                const isSelected = selectedPartId === part.id;
 
                 const tr = document.createElement('tr');
                 tr.dataset.partId = part.id;
                 tr.dataset.partCode = part.codigo || part.id;
-                tr.className = 'hover:bg-[#2d3238] transition-colors';
+                tr.className = `hover:bg-[#2d3238] transition-colors cursor-pointer ${isSelected ? 'row-selected' : ''}`;
+                tr.addEventListener('click', () => selectPartRow(part.id));
 
                 if (isAdmin) {
                     tr.innerHTML = `
@@ -1238,15 +1279,15 @@
                         </td>
                         <td class="py-2 px-2.5 whitespace-nowrap text-center">
                             <div class="inline-flex items-center gap-1.5">
-                                ${iptCellHTML}
-                                <label title="${pendingFile ? 'Pendiente: ' + escapeHTML(pendingFile.name) : 'Cargar o reemplazar archivo .ipt'}" class="cursor-pointer px-2 py-1 rounded ${pendingFile ? 'bg-[#1da1f2]/25 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-amber-400'} border text-xs font-bold transition inline-flex items-center">
+                                <span class="ipt-cell-slot">${iptCellHTML}</span>
+                                <label onclick="event.stopPropagation()" title="${pendingFile ? 'Pendiente: ' + escapeHTML(pendingFile.name) : 'Cargar o reemplazar archivo .ipt'}" class="cursor-pointer px-2 py-1 rounded ${pendingFile ? 'bg-[#1da1f2]/25 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-amber-400'} border text-xs font-bold transition inline-flex items-center">
                                     <i class="fa-solid fa-plus"></i>
                                     <input type="file" accept=".ipt" class="hidden" onchange="onTableRowFileSelected('${part.id}', event)">
                                 </label>
                             </div>
                         </td>
                         <td class="py-2 px-2.5 whitespace-nowrap text-right">
-                            <button onclick="confirmDeletePart('${part.id}')" title="Eliminar ítem" class="px-2 py-1 rounded bg-[#1e2227] hover:bg-red-950/60 text-[#aeb6c2] hover:text-red-400 text-xs transition">
+                            <button onclick="event.stopPropagation(); confirmDeletePart('${part.id}')" title="Eliminar ítem" class="px-2 py-1 rounded bg-[#1e2227] hover:bg-red-950/60 text-[#aeb6c2] hover:text-red-400 text-xs transition">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </td>
@@ -1258,7 +1299,7 @@
                         <td class="py-2.5 px-3 whitespace-nowrap text-[#cfd5de]">${escapeHTML(part.categoria)}</td>
                         <td class="py-2.5 px-3 max-w-md text-[#9aa2ad]">${escapeHTML(part.observaciones || '—')}</td>
                         <td class="py-2.5 px-3 whitespace-nowrap text-center">
-                            ${iptCellHTML}
+                            <span class="ipt-cell-slot">${iptCellHTML}</span>
                         </td>
                     `;
                 }
@@ -1316,6 +1357,7 @@
                 allParts = allParts.filter(x => x.id !== partId);
                 baselineSnapshots.delete(partId);
                 delete pendingRowFiles[partId];
+                if (selectedPartId === partId) selectedPartId = null;
                 renderPartsTable();
                 updatePendingChangesIndicator();
                 showToast('Eliminado.');
