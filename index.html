@@ -66,6 +66,7 @@
         .draggable-ipt-pill {
             cursor: grab;
             user-select: none;
+            -webkit-user-drag: element;
         }
         .draggable-ipt-pill:active {
             cursor: grabbing;
@@ -209,7 +210,7 @@
                     </span>
                 </div>
                 <p class="text-[11px] text-[#9aa2ad]">
-                    Arrastra el archivo <code class="text-[#1da1f2]">.ipt</code> directo a tu carpeta local o haz clic para descargarlo.
+                    Arrastra el botón <code class="text-[#1da1f2]">.ipt</code> directo a tu carpeta local o haz clic para descargarlo.
                 </p>
             </div>
 
@@ -221,7 +222,7 @@
                             <th class="py-2.5 px-3">Descripción</th>
                             <th class="py-2.5 px-3">Categoría</th>
                             <th class="py-2.5 px-3">Observaciones</th>
-                            <th class="py-2.5 px-3 text-center">Archivo .IPT (Arrastrable)</th>
+                            <th class="py-2.5 px-3 text-center">Archivo</th>
                             <th id="admin-actions-th" class="hidden py-2.5 px-3 text-right">Admin</th>
                         </tr>
                     </thead>
@@ -298,7 +299,7 @@
         let savedPopupTimer = null;
         let filterDebounceTimer = null;
 
-        // Caché en memoria de Blob URLs y descargas en curso para arrastre directo desde la tabla
+        // Caché en memoria de Blob URLs y descargas en curso para arrastre inmediato
         const blobUrlCache = new Map();
         const inFlightDownloads = new Map();
 
@@ -311,6 +312,12 @@
         function getActiveIptMeta(part) {
             if (pendingRowFiles[part.id]) return pendingRowFiles[part.id];
             return part.iptFile || null;
+        }
+
+        function getPublicStorageUrl(storagePath) {
+            if (!storagePath || !supabaseClient) return null;
+            const { data } = supabaseClient.storage.from(SB_BUCKET).getPublicUrl(storagePath);
+            return data && data.publicUrl ? data.publicUrl : null;
         }
 
         async function ensurePartFileBuffer(part) {
@@ -333,6 +340,7 @@
                         if (!error && data) {
                             part.iptFile.data = await data.arrayBuffer();
                             part.iptFile.size = part.iptFile.size || part.iptFile.data.byteLength;
+                            getOrCreatePartBlobUrl(part);
                             await savePartToDB(part).catch(() => {});
                             return part.iptFile;
                         }
@@ -371,13 +379,21 @@
             blobUrlCache.delete(partId);
         }
 
-        async function preloadPartForDrag(partId) {
-            const part = allParts.find(p => p.id === partId);
-            if (!part || !partHasIptFile(part)) return;
-            const fileObj = await ensurePartFileBuffer(part);
-            if (fileObj && fileObj.data) {
-                getOrCreatePartBlobUrl(part);
-            }
+        // Precarga en segundo plano todos los .ipt al abrir la página para que estén listos al instante
+        async function warmUpAllPartBlobs(partsList, concurrency = 4) {
+            const pending = partsList.filter(
+                p => p.iptFile && p.iptFile.storagePath && !p.iptFile.data
+            );
+            if (pending.length === 0) return;
+
+            let idx = 0;
+            const workers = Array.from({ length: Math.min(concurrency, pending.length) }, async () => {
+                while (idx < pending.length) {
+                    const current = pending[idx++];
+                    await ensurePartFileBuffer(current);
+                }
+            });
+            await Promise.all(workers);
         }
 
         function handleIptDragStart(event, partId) {
@@ -388,21 +404,21 @@
             }
             const active = getActiveIptMeta(part);
             const fileName = (active && active.name) ? active.name : `${part.codigo || 'pieza'}.ipt`;
-            const blobUrl = getOrCreatePartBlobUrl(part);
 
-            if (!blobUrl) {
-                // Si todavía no terminó de descargarse desde Supabase, disparamos la descarga y avisamos
+            // Prioriza Blob local en memoria (instantáneo); si aún bajaba, usa URL directa sin frenar el arrastre
+            const dragUrl = getOrCreatePartBlobUrl(part) || getPublicStorageUrl(active && active.storagePath);
+            if (!dragUrl) {
                 event.preventDefault();
-                showToast(`Preparando ${fileName}... volvé a arrastrarlo en un instante.`);
-                preloadPartForDrag(partId).then(() => {
-                    showToast(`${fileName} listo para arrastrar.`);
-                });
                 return;
             }
 
-            event.dataTransfer.setData('DownloadURL', `application/octet-stream:${fileName}:${blobUrl}`);
+            event.dataTransfer.setData('DownloadURL', `application/octet-stream:${fileName}:${dragUrl}`);
             event.dataTransfer.setData('text/plain', fileName);
             event.dataTransfer.effectAllowed = 'copy';
+
+            if (!getOrCreatePartBlobUrl(part)) {
+                ensurePartFileBuffer(part);
+            }
         }
 
         async function downloadPartIptFile(partId) {
@@ -618,6 +634,7 @@
                 }
             }
             captureBaselineSnapshots(finalParts);
+            warmUpAllPartBlobs(finalParts);
             return finalParts;
         }
 
@@ -1139,13 +1156,13 @@
             const pendingFile = pendingRowFiles[part.id];
             const hasFile = partHasIptFile(part);
             const activeMeta = getActiveIptMeta(part);
-            const displayFileName = activeMeta && activeMeta.name ? activeMeta.name : `${part.codigo || 'pieza'}.ipt`;
+            const fileName = activeMeta && activeMeta.name ? activeMeta.name : `${part.codigo || 'pieza'}.ipt`;
 
             if (!hasFile) {
                 return `
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#1e2227] text-[#6d7682] border border-[#353b42] font-mono text-[11px] opacity-60 select-none">
-                        <i class="fa-solid fa-file-circle-xmark"></i>
-                        <span>Sin .ipt</span>
+                    <span class="inline-flex items-center justify-center gap-1 px-2.5 py-1 rounded bg-[#1e2227] text-[#6d7682] border border-[#353b42] font-mono text-[11px] opacity-45 select-none">
+                        <i class="fa-solid fa-cube text-[10px]"></i>
+                        <span>.ipt</span>
                     </span>
                 `;
             }
@@ -1153,15 +1170,13 @@
             return `
                 <div
                     draggable="true"
-                    onmouseenter="preloadPartForDrag('${part.id}')"
                     ondragstart="handleIptDragStart(event, '${part.id}')"
                     onclick="downloadPartIptFile('${part.id}')"
-                    title="Arrastrar a carpeta local o clic para descargar (${escapeHTML(displayFileName)})"
-                    class="draggable-ipt-pill inline-flex items-center gap-1.5 px-2.5 py-1 rounded ${pendingFile ? 'bg-amber-500/20 border-amber-400/70 text-amber-200' : 'bg-[#1e2227] hover:bg-[#1da1f2]/20 border-[#3e454e] hover:border-[#1da1f2] text-[#e2e6ec]'} border font-mono text-[11px] transition max-w-[220px]"
+                    title="Arrastrar o descargar: ${escapeHTML(fileName)}"
+                    class="draggable-ipt-pill inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded ${pendingFile ? 'bg-[#1da1f2]/25 border-amber-400 text-[#7cc8fa]' : 'bg-[#1da1f2]/15 hover:bg-[#1da1f2]/30 border-[#1da1f2]/60 hover:border-[#1da1f2] text-[#38b6ff]'} border font-mono text-xs font-semibold transition"
                 >
-                    <i class="fa-solid fa-grip-vertical text-[#7d8692] text-[10px] shrink-0"></i>
-                    <i class="fa-solid fa-file-code text-[#1da1f2] shrink-0"></i>
-                    <span class="truncate font-semibold">${escapeHTML(displayFileName)}</span>
+                    <i class="fa-solid fa-cube text-[#1da1f2] text-xs"></i>
+                    <span>.ipt</span>
                 </div>
             `;
         }
@@ -1415,4 +1430,3 @@
     </script>
 </body>
 </html>
-
