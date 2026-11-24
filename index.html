@@ -70,6 +70,14 @@
         .row-selected:hover {
             background-color: #2b4054 !important;
         }
+        .group-header-row {
+            background-color: #20252b;
+            border-top: 1px solid #383e47;
+            border-bottom: 1px solid #383e47;
+        }
+        .group-header-row:hover {
+            background-color: #252b32;
+        }
         .draggable-ipt-pill {
             cursor: grab;
             user-select: none;
@@ -211,14 +219,19 @@
         <section class="dw-card overflow-hidden">
             <div class="dw-card-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">COMPONENTES CAD (.IPT)</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">COMPONENTES CAD (.IPT) • AGRUPADOS POR CATEGORÍA</span>
                     <span id="pending-changes-badge" class="hidden px-2 py-0.5 rounded bg-[#1da1f2]/20 border border-[#1da1f2]/50 text-[#69c3fa] font-mono text-[10px]">
                         0 cambio(s) pendiente(s)
                     </span>
                 </div>
-                <p class="text-[11px] text-[#9aa2ad]">
-                    Haz clic en una fila para resaltarla y arrastra su botón <code class="text-[#1da1f2]">.ipt</code> directo a tu carpeta local.
-                </p>
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="toggleAllCategories()" class="text-[11px] font-mono text-[#1da1f2] hover:text-[#69c3fa] transition">
+                        Expandir / Colapsar todo
+                    </button>
+                    <p class="hidden sm:block text-[11px] text-[#9aa2ad]">
+                        Clic en fila para resaltar • Arrastra <code class="text-[#1da1f2]">.ipt</code> a tu carpeta
+                    </p>
+                </div>
             </div>
 
             <div class="overflow-x-auto">
@@ -250,7 +263,7 @@
                 <span id="footer-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
                 <span id="footer-status-text">Base de Datos: <strong>Conectando...</strong></span>
             </div>
-            <div>Guardado diferencial por cambios • Sin duplicados por código • Archivo <code class="text-[#1da1f2]">.ipt</code> intacto y arrastrable</div>
+            <div>Agrupado por categoría • Sin duplicados por código • Archivo <code class="text-[#1da1f2]">.ipt</code> intacto y arrastrable</div>
         </div>
     </footer>
 
@@ -303,13 +316,69 @@
         let pendingRowFiles = {};
         let isAdmin = false;
         let selectedPartId = null;
+        let collapsedCategories = new Set();
         let confirmCallback = null;
         let savedPopupTimer = null;
         let filterDebounceTimer = null;
 
-        // Caché en memoria de Blob URLs y descargas en curso para arrastre inmediato
         const blobUrlCache = new Map();
         const inFlightDownloads = new Map();
+
+        function getCategoryKey(part) {
+            const raw = (part && part.categoria) ? String(part.categoria).trim() : '';
+            if (!raw) return '__uncategorized__';
+            return raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+
+        function getCategoryLabel(part) {
+            const raw = (part && part.categoria) ? String(part.categoria).trim() : '';
+            return raw || 'Sin categoría';
+        }
+
+        function toggleCategoryGroup(catKey) {
+            if (collapsedCategories.has(catKey)) {
+                collapsedCategories.delete(catKey);
+            } else {
+                collapsedCategories.add(catKey);
+            }
+            renderPartsTable();
+        }
+
+        function toggleAllCategories() {
+            const grouped = groupPartsByCategory(getFilteredParts());
+            if (grouped.length === 0) return;
+            const allCollapsed = grouped.every(g => collapsedCategories.has(g.key));
+            if (allCollapsed) {
+                collapsedCategories.clear();
+            } else {
+                grouped.forEach(g => collapsedCategories.add(g.key));
+            }
+            renderPartsTable();
+        }
+
+        function groupPartsByCategory(partsList) {
+            const map = new Map();
+            for (const part of partsList) {
+                const key = getCategoryKey(part);
+                if (!map.has(key)) {
+                    map.set(key, {
+                        key,
+                        label: getCategoryLabel(part),
+                        isUncategorized: key === '__uncategorized__',
+                        items: []
+                    });
+                }
+                map.get(key).items.push(part);
+            }
+
+            const groups = Array.from(map.values());
+            groups.sort((a, b) => {
+                if (a.isUncategorized && !b.isUncategorized) return 1;
+                if (!a.isUncategorized && b.isUncategorized) return -1;
+                return a.label.localeCompare(b.label, 'es', { sensitivity: 'base' });
+            });
+            return groups;
+        }
 
         function selectPartRow(partId) {
             if (selectedPartId === partId) return;
@@ -1220,28 +1289,31 @@
             `;
         }
 
-        function renderPartsTable() {
-            const tbody = document.getElementById('parts-table-body');
-            const emptyState = document.getElementById('empty-state');
+        function getFilteredParts() {
             const terms = [];
             for (let i = 1; i <= 5; i++) {
                 const v = document.getElementById(`multi-search-${i}`).value.trim();
                 if (v) terms.push(normalizeText(v));
             }
 
-            let filtered = allParts;
-            if (terms.length > 0) {
-                filtered = allParts.filter(part => {
-                    const hay = part._searchNorm || normalizeText([
-                        part.codigo, part.descripcion, part.categoria, part.observaciones,
-                        part.iptFile ? part.iptFile.name : ''
-                    ].join(' '));
-                    for (let i = 0; i < terms.length; i++) {
-                        if (!hay.includes(terms[i])) return false;
-                    }
-                    return true;
-                });
-            }
+            if (terms.length === 0) return allParts;
+
+            return allParts.filter(part => {
+                const hay = part._searchNorm || normalizeText([
+                    part.codigo, part.descripcion, part.categoria, part.observaciones,
+                    part.iptFile ? part.iptFile.name : ''
+                ].join(' '));
+                for (let i = 0; i < terms.length; i++) {
+                    if (!hay.includes(terms[i])) return false;
+                }
+                return true;
+            });
+        }
+
+        function renderPartsTable() {
+            const tbody = document.getElementById('parts-table-body');
+            const emptyState = document.getElementById('empty-state');
+            const filtered = getFilteredParts();
 
             document.getElementById('items-count').textContent = filtered.length;
             if (filtered.length === 0) {
@@ -1251,59 +1323,86 @@
             }
             emptyState.classList.add('hidden');
 
+            const groups = groupPartsByCategory(filtered);
+            const colSpan = isAdmin ? 6 : 5;
             const frag = document.createDocumentFragment();
-            filtered.forEach(part => {
-                const pendingFile = pendingRowFiles[part.id];
-                const iptCellHTML = buildDraggableIptCellHTML(part);
-                const isSelected = selectedPartId === part.id;
 
-                const tr = document.createElement('tr');
-                tr.dataset.partId = part.id;
-                tr.dataset.partCode = part.codigo || part.id;
-                tr.className = `hover:bg-[#2d3238] transition-colors cursor-pointer ${isSelected ? 'row-selected' : ''}`;
-                tr.addEventListener('click', () => selectPartRow(part.id));
+            groups.forEach(group => {
+                const isCollapsed = collapsedCategories.has(group.key);
 
-                if (isAdmin) {
-                    tr.innerHTML = `
-                        <td class="py-2 px-2.5 whitespace-nowrap">
-                            <input type="text" id="edit-code-${part.id}" value="${escapeHTML(part.codigo)}" class="inline-cell-input font-mono text-[#1da1f2] w-28">
-                        </td>
-                        <td class="py-2 px-2.5 min-w-[180px]">
-                            <input type="text" id="edit-desc-${part.id}" value="${escapeHTML(part.descripcion)}" class="inline-cell-input">
-                        </td>
-                        <td class="py-2 px-2.5 min-w-[140px]">
-                            <input type="text" id="edit-cat-${part.id}" value="${escapeHTML(part.categoria)}" class="inline-cell-input">
-                        </td>
-                        <td class="py-2 px-2.5 min-w-[180px]">
-                            <input type="text" id="edit-obs-${part.id}" value="${escapeHTML(part.observaciones || '')}" class="inline-cell-input text-[#aeb6c2]">
-                        </td>
-                        <td class="py-2 px-2.5 whitespace-nowrap text-center">
-                            <div class="inline-flex items-center gap-1.5">
-                                <span class="ipt-cell-slot">${iptCellHTML}</span>
-                                <label onclick="event.stopPropagation()" title="${pendingFile ? 'Pendiente: ' + escapeHTML(pendingFile.name) : 'Cargar o reemplazar archivo .ipt'}" class="cursor-pointer px-2 py-1 rounded ${pendingFile ? 'bg-[#1da1f2]/25 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-amber-400'} border text-xs font-bold transition inline-flex items-center">
-                                    <i class="fa-solid fa-plus"></i>
-                                    <input type="file" accept=".ipt" class="hidden" onchange="onTableRowFileSelected('${part.id}', event)">
-                                </label>
+                const groupRow = document.createElement('tr');
+                groupRow.className = 'group-header-row cursor-pointer select-none';
+                groupRow.addEventListener('click', () => toggleCategoryGroup(group.key));
+                groupRow.innerHTML = `
+                    <td colspan="${colSpan}" class="py-2 px-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid ${isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'} text-[10px] text-[#1da1f2] w-3"></i>
+                                <span class="font-semibold text-xs uppercase tracking-wide ${group.isUncategorized ? 'text-[#9aa2ad]' : 'text-[#e6eaef]'}">${escapeHTML(group.label)}</span>
                             </div>
-                        </td>
-                        <td class="py-2 px-2.5 whitespace-nowrap text-right">
-                            <button onclick="event.stopPropagation(); confirmDeletePart('${part.id}')" title="Eliminar ítem" class="px-2 py-1 rounded bg-[#1e2227] hover:bg-red-950/60 text-[#aeb6c2] hover:text-red-400 text-xs transition">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </td>
-                    `;
-                } else {
-                    tr.innerHTML = `
-                        <td class="py-2.5 px-3 whitespace-nowrap font-mono text-xs font-semibold text-[#1da1f2]">${escapeHTML(part.codigo)}</td>
-                        <td class="py-2.5 px-3 text-[#e2e6ec] font-medium">${escapeHTML(part.descripcion)}</td>
-                        <td class="py-2.5 px-3 whitespace-nowrap text-[#cfd5de]">${escapeHTML(part.categoria)}</td>
-                        <td class="py-2.5 px-3 max-w-md text-[#9aa2ad]">${escapeHTML(part.observaciones || '—')}</td>
-                        <td class="py-2.5 px-3 whitespace-nowrap text-center">
-                            <span class="ipt-cell-slot">${iptCellHTML}</span>
-                        </td>
-                    `;
-                }
-                frag.appendChild(tr);
+                            <span class="px-2 py-0.5 rounded bg-[#181c20] border border-[#343a42] font-mono text-[10px] text-[#1da1f2]">
+                                ${group.items.length}
+                            </span>
+                        </div>
+                    </td>
+                `;
+                frag.appendChild(groupRow);
+
+                if (isCollapsed) return;
+
+                group.items.forEach(part => {
+                    const pendingFile = pendingRowFiles[part.id];
+                    const iptCellHTML = buildDraggableIptCellHTML(part);
+                    const isSelected = selectedPartId === part.id;
+
+                    const tr = document.createElement('tr');
+                    tr.dataset.partId = part.id;
+                    tr.dataset.partCode = part.codigo || part.id;
+                    tr.className = `hover:bg-[#2d3238] transition-colors cursor-pointer ${isSelected ? 'row-selected' : ''}`;
+                    tr.addEventListener('click', () => selectPartRow(part.id));
+
+                    if (isAdmin) {
+                        tr.innerHTML = `
+                            <td class="py-2 px-2.5 whitespace-nowrap">
+                                <input type="text" id="edit-code-${part.id}" value="${escapeHTML(part.codigo)}" class="inline-cell-input font-mono text-[#1da1f2] w-28">
+                            </td>
+                            <td class="py-2 px-2.5 min-w-[180px]">
+                                <input type="text" id="edit-desc-${part.id}" value="${escapeHTML(part.descripcion)}" class="inline-cell-input">
+                            </td>
+                            <td class="py-2 px-2.5 min-w-[140px]">
+                                <input type="text" id="edit-cat-${part.id}" value="${escapeHTML(part.categoria)}" class="inline-cell-input">
+                            </td>
+                            <td class="py-2 px-2.5 min-w-[180px]">
+                                <input type="text" id="edit-obs-${part.id}" value="${escapeHTML(part.observaciones || '')}" class="inline-cell-input text-[#aeb6c2]">
+                            </td>
+                            <td class="py-2 px-2.5 whitespace-nowrap text-center">
+                                <div class="inline-flex items-center gap-1.5">
+                                    <span class="ipt-cell-slot">${iptCellHTML}</span>
+                                    <label onclick="event.stopPropagation()" title="${pendingFile ? 'Pendiente: ' + escapeHTML(pendingFile.name) : 'Cargar o reemplazar archivo .ipt'}" class="cursor-pointer px-2 py-1 rounded ${pendingFile ? 'bg-[#1da1f2]/25 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-amber-400'} border text-xs font-bold transition inline-flex items-center">
+                                        <i class="fa-solid fa-plus"></i>
+                                        <input type="file" accept=".ipt" class="hidden" onchange="onTableRowFileSelected('${part.id}', event)">
+                                    </label>
+                                </div>
+                            </td>
+                            <td class="py-2 px-2.5 whitespace-nowrap text-right">
+                                <button onclick="event.stopPropagation(); confirmDeletePart('${part.id}')" title="Eliminar ítem" class="px-2 py-1 rounded bg-[#1e2227] hover:bg-red-950/60 text-[#aeb6c2] hover:text-red-400 text-xs transition">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                    } else {
+                        tr.innerHTML = `
+                            <td class="py-2.5 px-3 whitespace-nowrap font-mono text-xs font-semibold text-[#1da1f2]">${escapeHTML(part.codigo)}</td>
+                            <td class="py-2.5 px-3 text-[#e2e6ec] font-medium">${escapeHTML(part.descripcion)}</td>
+                            <td class="py-2.5 px-3 whitespace-nowrap text-[#cfd5de]">${escapeHTML(part.categoria)}</td>
+                            <td class="py-2.5 px-3 max-w-md text-[#9aa2ad]">${escapeHTML(part.observaciones || '—')}</td>
+                            <td class="py-2.5 px-3 whitespace-nowrap text-center">
+                                <span class="ipt-cell-slot">${iptCellHTML}</span>
+                            </td>
+                        `;
+                    }
+                    frag.appendChild(tr);
+                });
             });
 
             tbody.innerHTML = '';
