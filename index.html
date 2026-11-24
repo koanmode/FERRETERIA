@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DATAWAVES - FERRETERÍA CAD (.IPT)</title>
+    <title>DATAWAVES - FERRETERÍA CAD (.IPT / .STL)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -128,7 +128,7 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
             <h1 class="font-semibold text-xs sm:text-sm tracking-wider uppercase text-[#e6eaef] truncate">
-                DATAWAVES - FERRETERÍA CAD (.IPT)
+                DATAWAVES - FERRETERÍA CAD (.IPT / .STL)
             </h1>
             <span id="db-mode-pill" class="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded bg-[#23272c] text-[#b5bcc6] border border-[#343a42]">
                 <span id="db-mode-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
@@ -219,7 +219,7 @@
         <section class="dw-card overflow-hidden">
             <div class="dw-card-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">COMPONENTES CAD (.IPT) • AGRUPADOS POR CATEGORÍA</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">COMPONENTES CAD (.IPT / .STL) • AGRUPADOS POR CATEGORÍA</span>
                     <span id="pending-changes-badge" class="hidden px-2 py-0.5 rounded bg-[#1da1f2]/20 border border-[#1da1f2]/50 text-[#69c3fa] font-mono text-[10px]">
                         0 cambio(s) pendiente(s)
                     </span>
@@ -229,7 +229,7 @@
                         Expandir / Colapsar todo
                     </button>
                     <p class="hidden sm:block text-[11px] text-[#9aa2ad]">
-                        Clic en fila para resaltar • Arrastra <code class="text-[#1da1f2]">.ipt</code> a tu carpeta
+                        Clic en fila para resaltar • Arrastra <code class="text-[#1da1f2]">.ipt</code> o <code class="text-white">.stl</code> a tu carpeta
                     </p>
                 </div>
             </div>
@@ -263,7 +263,7 @@
                 <span id="footer-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
                 <span id="footer-status-text">Base de Datos: <strong>Conectando...</strong></span>
             </div>
-            <div>Agrupado por categoría • Sin duplicados por código • Archivo <code class="text-[#1da1f2]">.ipt</code> intacto y arrastrable</div>
+            <div>Agrupado por categoría • Sin duplicados por código • Archivos <code class="text-[#1da1f2]">.ipt</code> / <code class="text-white">.stl</code> intactos y arrastrables</div>
         </div>
     </footer>
 
@@ -323,6 +323,12 @@
 
         const blobUrlCache = new Map();
         const inFlightDownloads = new Map();
+
+        function getFileExtensionType(fileName) {
+            const lower = String(fileName || '').trim().toLowerCase();
+            if (lower.endsWith('.stl')) return 'stl';
+            return 'ipt';
+        }
 
         function getCategoryKey(part) {
             const raw = (part && part.categoria) ? String(part.categoria).trim() : '';
@@ -530,7 +536,7 @@
 
             const fileObj = await ensurePartFileBuffer(part);
             if (!fileObj || !fileObj.data) {
-                showToast('No se pudo obtener el archivo .ipt.');
+                showToast('No se pudo obtener el archivo.');
                 return;
             }
 
@@ -981,6 +987,7 @@
 
             draftRows.forEach((row, idx) => {
                 const attached = pendingRowFiles[row.id];
+                const isStl = attached && getFileExtensionType(attached.name) === 'stl';
                 const div = document.createElement('div');
                 div.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center bg-[#1e2227] border border-[#353b42] rounded p-2';
                 div.innerHTML = `
@@ -997,10 +1004,10 @@
                         <input type="text" id="draft-obs-${row.id}" value="${escapeHTML(row.observaciones)}" placeholder="Observaciones (opcional)" oninput="updatePendingChangesIndicator()" class="inline-cell-input text-[#aeb6c2]">
                     </div>
                     <div class="lg:col-span-2 flex items-center justify-end gap-1.5">
-                        <label title="Adjuntar archivo .ipt" class="flex-1 cursor-pointer px-2 py-1 rounded ${attached ? 'bg-[#1da1f2]/20 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#272b30] hover:bg-[#32373e] border-[#3e454e] text-[#d5dbe2]'} border text-[11px] font-medium truncate flex items-center justify-center gap-1">
+                        <label title="Adjuntar archivo .ipt o .stl" class="flex-1 cursor-pointer px-2 py-1 rounded ${attached ? (isStl ? 'bg-white/15 border-white/80 text-white' : 'bg-[#1da1f2]/20 border-[#1da1f2] text-[#8fd2fc]') : 'bg-[#272b30] hover:bg-[#32373e] border-[#3e454e] text-[#d5dbe2]'} border text-[11px] font-medium truncate flex items-center justify-center gap-1">
                             <i class="fa-solid fa-plus text-amber-400 shrink-0"></i>
-                            <span class="truncate">${attached ? escapeHTML(attached.name) : '.IPT'}</span>
-                            <input type="file" accept=".ipt" class="hidden" onchange="onDraftFileSelected('${row.id}', event)">
+                            <span class="truncate">${attached ? escapeHTML(attached.name) : '.IPT / .STL'}</span>
+                            <input type="file" accept=".ipt,.stl" class="hidden" onchange="onDraftFileSelected('${row.id}', event)">
                         </label>
                         <button type="button" onclick="removeDraftRow('${row.id}')" title="Quitar fila" class="px-2 py-1 rounded bg-[#272b30] hover:bg-red-950/60 text-[#9aa2ad] hover:text-red-400 text-xs">
                             <i class="fa-solid fa-xmark"></i>
@@ -1187,7 +1194,7 @@
                 document.querySelectorAll('tr[data-part-id]').forEach(r => r.classList.remove('row-drop-active'));
                 if (row) {
                     row.classList.add('row-drop-active');
-                    targetLabel.textContent = `Soltar .IPT en fila: ${row.dataset.partCode || row.dataset.partId}`;
+                    targetLabel.textContent = `Soltar .IPT / .STL en fila: ${row.dataset.partCode || row.dataset.partId}`;
                 } else {
                     targetLabel.textContent = 'Mueve el cursor sobre la fila o suelta aquí para agregar al listado';
                 }
@@ -1270,10 +1277,23 @@
                 `;
             }
 
-            const pillClasses = isSelected
-                ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-400 text-amber-300 shadow-sm shadow-amber-500/20'
-                : 'bg-[#1da1f2]/15 hover:bg-[#1da1f2]/30 border-[#1da1f2]/60 hover:border-[#1da1f2] text-[#38b6ff]';
-            const iconClasses = isSelected ? 'text-amber-400' : 'text-[#1da1f2]';
+            const extType = getFileExtensionType(fileName);
+            const isStl = extType === 'stl';
+            const badgeText = isStl ? '.stl' : '.ipt';
+
+            let pillClasses;
+            let iconClasses;
+
+            if (isSelected) {
+                pillClasses = 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-400 text-amber-300 shadow-sm shadow-amber-500/20';
+                iconClasses = 'text-amber-400';
+            } else if (isStl) {
+                pillClasses = 'bg-white/15 hover:bg-white/25 border-white/75 hover:border-white text-white';
+                iconClasses = 'text-white';
+            } else {
+                pillClasses = 'bg-[#1da1f2]/15 hover:bg-[#1da1f2]/30 border-[#1da1f2]/60 hover:border-[#1da1f2] text-[#38b6ff]';
+                iconClasses = 'text-[#1da1f2]';
+            }
 
             return `
                 <div
@@ -1284,7 +1304,7 @@
                     class="draggable-ipt-pill inline-flex items-center justify-center gap-1.5 px-2.5 py-1 rounded ${pillClasses} border font-mono text-xs font-semibold transition"
                 >
                     <i class="fa-solid fa-cube ${iconClasses} text-xs transition-colors"></i>
-                    <span>.ipt</span>
+                    <span>${badgeText}</span>
                 </div>
             `;
         }
@@ -1378,9 +1398,9 @@
                             <td class="py-2 px-2.5 whitespace-nowrap text-center">
                                 <div class="inline-flex items-center gap-1.5">
                                     <span class="ipt-cell-slot">${iptCellHTML}</span>
-                                    <label onclick="event.stopPropagation()" title="${pendingFile ? 'Pendiente: ' + escapeHTML(pendingFile.name) : 'Cargar o reemplazar archivo .ipt'}" class="cursor-pointer px-2 py-1 rounded ${pendingFile ? 'bg-[#1da1f2]/25 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-amber-400'} border text-xs font-bold transition inline-flex items-center">
+                                    <label onclick="event.stopPropagation()" title="${pendingFile ? 'Pendiente: ' + escapeHTML(pendingFile.name) : 'Cargar o reemplazar archivo .ipt / .stl'}" class="cursor-pointer px-2 py-1 rounded ${pendingFile ? 'bg-[#1da1f2]/25 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-amber-400'} border text-xs font-bold transition inline-flex items-center">
                                         <i class="fa-solid fa-plus"></i>
-                                        <input type="file" accept=".ipt" class="hidden" onchange="onTableRowFileSelected('${part.id}', event)">
+                                        <input type="file" accept=".ipt,.stl" class="hidden" onchange="onTableRowFileSelected('${part.id}', event)">
                                     </label>
                                 </div>
                             </td>
