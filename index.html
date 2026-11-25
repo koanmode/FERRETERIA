@@ -72,6 +72,13 @@
             outline: 2px solid #1da1f2;
             outline-offset: -2px;
         }
+        .row-has-obs {
+            background-color: rgba(239, 68, 68, 0.12) !important;
+            box-shadow: inset 3px 0 0 rgba(248, 113, 113, 0.75);
+        }
+        .row-has-obs:hover {
+            background-color: rgba(239, 68, 68, 0.20) !important;
+        }
         .row-selected {
             background-color: #263849 !important;
             box-shadow: inset 3px 0 0 #f59e0b;
@@ -186,8 +193,19 @@
                     <i class="fa-solid fa-filter text-[#1da1f2]"></i>
                     <span>Filtro Múltiple Acumulativo</span>
                 </div>
-                <div class="flex items-center gap-2">
+                <div class="flex flex-wrap items-center gap-2">
                     <span class="text-xs text-[#9aa2ad]">Registros: <strong id="items-count" class="font-mono text-[#1da1f2]">0</strong></span>
+                    <button
+                        type="button"
+                        id="filter-obs-btn"
+                        onclick="toggleOnlyObservationsFilter()"
+                        title="Mostrar únicamente los ítems que tienen observaciones"
+                        class="px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-xs text-[#e2e6ec] transition flex items-center gap-1.5"
+                    >
+                        <span class="w-2 h-2 rounded-full bg-red-400"></span>
+                        <span>Con observaciones</span>
+                        <span id="obs-total-count" class="font-mono text-[10px] text-[#9aa2ad]">(0)</span>
+                    </button>
                     <button onclick="clearMultiSearch()" class="px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-xs text-[#e2e6ec] transition">
                         Limpiar
                     </button>
@@ -651,23 +669,49 @@
         let allParts = [];
         let baselineSnapshots = new Map();
         let draftRows = [];
-        // pendingRowFiles[rowOrPartId] = { ipt?: FileEntry[], stl?: FileEntry[] } (undefined = sin cambio, [] = eliminar todos)
         let pendingRowFiles = {};
         let isAdmin = false;
         let selectedPartId = null;
+        let onlyWithObservations = false;
         let collapsedCategories = new Set();
         let confirmCallback = null;
         let savedPopupTimer = null;
         let filterDebounceTimer = null;
 
-        // blobUrlCache: key `${partId}:${slot}` -> { url, signature, fileName }
         const blobUrlCache = new Map();
         const inFlightDownloads = new Map();
+
+        function partHasObservations(part) {
+            if (!part) return false;
+            return String(part.observaciones || '').trim().length > 0;
+        }
+
+        function updateObservationsFilterUI() {
+            const btn = document.getElementById('filter-obs-btn');
+            const countEl = document.getElementById('obs-total-count');
+            const totalWithObs = allParts.filter(partHasObservations).length;
+            if (countEl) {
+                countEl.textContent = `(${totalWithObs})`;
+            }
+            if (btn) {
+                if (onlyWithObservations) {
+                    btn.className = 'px-2.5 py-1 rounded bg-red-500/20 hover:bg-red-500/30 border border-red-400/80 text-xs text-red-200 font-semibold transition flex items-center gap-1.5';
+                } else {
+                    btn.className = 'px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-xs text-[#e2e6ec] transition flex items-center gap-1.5';
+                }
+            }
+        }
+
+        function toggleOnlyObservationsFilter() {
+            onlyWithObservations = !onlyWithObservations;
+            updateObservationsFilterUI();
+            renderPartsTable();
+        }
 
         function getFileExtensionSlot(fileName) {
             const lower = String(fileName || '').trim().toLowerCase();
             if (lower.endsWith('.stl')) return 'stl';
-            return 'ipt'; // Agrupa .iam y .ipt en el slot CAD/Inventor
+            return 'ipt';
         }
 
         function isIamFileName(fileName) {
@@ -1441,6 +1485,8 @@
 
         function clearMultiSearch() {
             for (let i = 1; i <= 5; i++) document.getElementById(`multi-search-${i}`).value = '';
+            onlyWithObservations = false;
+            updateObservationsFilterUI();
             renderPartsTable();
         }
 
@@ -1850,6 +1896,7 @@
                     id: 'draft-' + Date.now(), codigo: '', descripcion: '', categoria: '', observaciones: ''
                 }];
 
+                updateObservationsFilterUI();
                 renderDraftRows();
                 renderPartsTable();
                 updatePendingChangesIndicator();
@@ -1939,7 +1986,6 @@
                     const knownCodes = getKnownCodeKeys();
                     const iamFile = files.find(f => isIamFileName(f.name));
 
-                    // Si sueltan un .iam junto con varios .ipt/.stl, se agrupan todos en un mismo ítem ensamble
                     if (iamFile && files.length > 1) {
                         const candidateCode = iamFile.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
                         const key = normalizeCodeKey(candidateCode);
@@ -2024,9 +2070,7 @@
             const isPendingDelete = Boolean(pendingObj && Object.prototype.hasOwnProperty.call(pendingObj, slot) && Array.isArray(pendingObj[slot]) && pendingObj[slot].length === 0);
             const isPendingUpload = Boolean(pendingObj && Array.isArray(pendingObj[slot]) && pendingObj[slot].some(f => f._isNewUpload));
 
-            // Si NO tiene archivos en este slot:
             if (!info) {
-                // En modo lectura NO mostramos nada
                 if (!isAdmin) return '';
 
                 const acceptAttr = isStl ? '.stl' : '.ipt,.iam';
@@ -2102,7 +2146,6 @@
         }
 
         function buildStlViewButtonHTML(part) {
-            // Solo mostrar el botón Ver si el ítem tiene archivo(s) .stl
             if (!partHasSlotFile(part, 'stl')) return '';
 
             return `
@@ -2146,9 +2189,13 @@
                 if (v) terms.push(normalizeText(v));
             }
 
-            if (terms.length === 0) return allParts;
+            if (terms.length === 0 && !onlyWithObservations) return allParts;
 
             return allParts.filter(part => {
+                if (onlyWithObservations && !partHasObservations(part)) return false;
+
+                if (terms.length === 0) return true;
+
                 const hay = part._searchNorm || normalizeText([
                     part.codigo, part.descripcion, part.categoria, part.observaciones,
                     ...normalizeFileArray(part.iptFiles).map(f => f.name),
@@ -2166,6 +2213,7 @@
             const emptyState = document.getElementById('empty-state');
             const filtered = getFilteredParts();
 
+            updateObservationsFilterUI();
             document.getElementById('items-count').textContent = filtered.length;
             if (filtered.length === 0) {
                 tbody.innerHTML = '';
@@ -2204,11 +2252,12 @@
                 group.items.forEach(part => {
                     const filesCellHTML = buildFilesCellHTML(part);
                     const isSelected = selectedPartId === part.id;
+                    const hasObs = partHasObservations(part);
 
                     const tr = document.createElement('tr');
                     tr.dataset.partId = part.id;
                     tr.dataset.partCode = part.codigo || part.id;
-                    tr.className = `hover:bg-[#2d3238] transition-colors cursor-pointer ${isSelected ? 'row-selected' : ''}`;
+                    tr.className = `hover:bg-[#2d3238] transition-colors cursor-pointer ${hasObs ? 'row-has-obs' : ''} ${isSelected ? 'row-selected' : ''}`;
                     tr.addEventListener('click', () => selectPartRow(part.id));
 
                     if (isAdmin) {
@@ -2223,7 +2272,7 @@
                                 <input type="text" id="edit-cat-${part.id}" value="${escapeHTML(part.categoria)}" class="inline-cell-input">
                             </td>
                             <td class="py-2 px-2.5 min-w-[180px]">
-                                <input type="text" id="edit-obs-${part.id}" value="${escapeHTML(part.observaciones || '')}" class="inline-cell-input text-[#aeb6c2]">
+                                <input type="text" id="edit-obs-${part.id}" value="${escapeHTML(part.observaciones || '')}" class="inline-cell-input ${hasObs ? 'text-red-200 border-red-400/50' : 'text-[#aeb6c2]'}">
                             </td>
                             <td class="py-2 px-2.5 whitespace-nowrap text-center">
                                 <span class="files-cell-slot">${filesCellHTML}</span>
@@ -2239,7 +2288,7 @@
                             <td class="py-2.5 px-3 whitespace-nowrap font-mono text-xs font-semibold text-[#1da1f2]">${escapeHTML(part.codigo)}</td>
                             <td class="py-2.5 px-3 text-[#e2e6ec] font-medium">${escapeHTML(part.descripcion)}</td>
                             <td class="py-2.5 px-3 whitespace-nowrap text-[#cfd5de]">${escapeHTML(part.categoria)}</td>
-                            <td class="py-2.5 px-3 max-w-md text-[#9aa2ad]">${escapeHTML(part.observaciones || '—')}</td>
+                            <td class="py-2.5 px-3 max-w-md ${hasObs ? 'text-red-200 font-medium' : 'text-[#9aa2ad]'}">${escapeHTML(part.observaciones || '—')}</td>
                             <td class="py-2.5 px-3 whitespace-nowrap text-center">
                                 <span class="files-cell-slot">${filesCellHTML}</span>
                             </td>
@@ -2408,7 +2457,6 @@
             return b.buffer;
         }
 
-        // Exponer funciones y referencias globales para el módulo Three.js
         window.getAllPartsRef = () => allParts;
         window.selectPartRow = selectPartRow;
         window.partHasSlotFile = partHasSlotFile;
@@ -2434,11 +2482,15 @@
                         const curCode = document.getElementById(`edit-code-${partId}`)?.value.trim() ?? '';
                         const curDesc = document.getElementById(`edit-desc-${partId}`)?.value.trim() ?? '';
                         const curCat = document.getElementById(`edit-cat-${partId}`)?.value.trim() ?? '';
-                        const curObs = document.getElementById(`edit-obs-${partId}`)?.value.trim() ?? '';
+                        const obsInputEl = document.getElementById(`edit-obs-${partId}`);
+                        const curObs = obsInputEl?.value.trim() ?? '';
                         document.getElementById(`edit-code-${partId}`)?.classList.toggle('cell-changed', curCode !== snap.codigo);
                         document.getElementById(`edit-desc-${partId}`)?.classList.toggle('cell-changed', curDesc !== snap.descripcion);
                         document.getElementById(`edit-cat-${partId}`)?.classList.toggle('cell-changed', curCat !== snap.categoria);
-                        document.getElementById(`edit-obs-${partId}`)?.classList.toggle('cell-changed', curObs !== snap.observaciones);
+                        obsInputEl?.classList.toggle('cell-changed', curObs !== snap.observaciones);
+                        if (row) {
+                            row.classList.toggle('row-has-obs', curObs.length > 0);
+                        }
                     }
                     updatePendingChangesIndicator();
                 }
