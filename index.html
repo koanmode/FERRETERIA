@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DATAWAVES - FERRETERÍA CAD (.IPT / .STL)</title>
+    <title>DATAWAVES - FERRETERÍA CAD (.IAM / .IPT / .STL)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="importmap">
         {
@@ -136,7 +137,7 @@
                 <i class="fa-solid fa-bars"></i>
             </button>
             <h1 class="font-semibold text-xs sm:text-sm tracking-wider uppercase text-[#e6eaef] truncate">
-                DATAWAVES - FERRETERÍA CAD (.IPT / .STL)
+                DATAWAVES - FERRETERÍA CAD (.IAM / .IPT / .STL)
             </h1>
             <span id="db-mode-pill" class="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded bg-[#23272c] text-[#b5bcc6] border border-[#343a42]">
                 <span id="db-mode-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
@@ -227,7 +228,7 @@
         <section class="dw-card overflow-hidden">
             <div class="dw-card-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">COMPONENTES CAD (.IPT / .STL) • AGRUPADOS POR CATEGORÍA</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">COMPONENTES CAD (.IAM / .IPT / .STL) • AGRUPADOS POR CATEGORÍA</span>
                     <span id="pending-changes-badge" class="hidden px-2 py-0.5 rounded bg-[#1da1f2]/20 border border-[#1da1f2]/50 text-[#69c3fa] font-mono text-[10px]">
                         0 cambio(s) pendiente(s)
                     </span>
@@ -237,7 +238,7 @@
                         Expandir / Colapsar todo
                     </button>
                     <p class="hidden sm:block text-[11px] text-[#9aa2ad]">
-                        Clic en fila para resaltar • Arrastra <code class="text-[#1da1f2]">.ipt</code> o <code class="text-white">.stl</code> a tu carpeta
+                        Clic en fila para resaltar • Arrastra <code class="text-[#1da1f2]">.iam/.ipt</code> o <code class="text-white">.stl</code> a tu carpeta
                     </p>
                 </div>
             </div>
@@ -250,7 +251,7 @@
                             <th class="py-2.5 px-3">Descripción</th>
                             <th class="py-2.5 px-3">Categoría</th>
                             <th class="py-2.5 px-3">Observaciones</th>
-                            <th class="py-2.5 px-3 text-center">Archivos (.IPT / .STL)</th>
+                            <th class="py-2.5 px-3 text-center">Archivos (.IAM / .IPT / .STL)</th>
                             <th id="admin-actions-th" class="hidden py-2.5 px-3 text-right">Admin</th>
                         </tr>
                     </thead>
@@ -271,7 +272,7 @@
                 <span id="footer-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
                 <span id="footer-status-text">Base de Datos: <strong>Conectando...</strong></span>
             </div>
-            <div>Agrupado por categoría • Sin duplicados por código • Archivos <code class="text-[#1da1f2]">.ipt</code> y <code class="text-white">.stl</code> independientes y arrastrables</div>
+            <div>Agrupado por categoría • Sin duplicados por código • Soporta múltiples archivos y ensambles (.iam + .ipt / .stl)</div>
         </div>
     </footer>
 
@@ -364,9 +365,9 @@
             camera: null,
             renderer: null,
             controls: null,
-            mesh: null,
-            geometry: null,
-            material: null,
+            group: null,
+            geometries: [],
+            materials: [],
             animationId: null,
             resizeObserver: null,
             wireframe: false,
@@ -387,14 +388,15 @@
                 viewerState.controls.dispose();
                 viewerState.controls = null;
             }
-            if (viewerState.geometry) {
-                viewerState.geometry.dispose();
-                viewerState.geometry = null;
+            for (const g of (viewerState.geometries || [])) {
+                if (g && g.dispose) g.dispose();
             }
-            if (viewerState.material) {
-                viewerState.material.dispose();
-                viewerState.material = null;
+            for (const m of (viewerState.materials || [])) {
+                if (m && m.dispose) m.dispose();
             }
+            viewerState.geometries = [];
+            viewerState.materials = [];
+
             if (viewerState.renderer) {
                 viewerState.renderer.dispose();
                 if (viewerState.renderer.domElement && viewerState.renderer.domElement.parentNode) {
@@ -404,7 +406,7 @@
             }
             viewerState.scene = null;
             viewerState.camera = null;
-            viewerState.mesh = null;
+            viewerState.group = null;
             viewerState.wireframe = false;
         }
 
@@ -446,9 +448,11 @@
         };
 
         window.toggleStlWireframe = function () {
-            if (!viewerState.material) return;
+            if (!viewerState.materials || viewerState.materials.length === 0) return;
             viewerState.wireframe = !viewerState.wireframe;
-            viewerState.material.wireframe = viewerState.wireframe;
+            for (const m of viewerState.materials) {
+                m.wireframe = viewerState.wireframe;
+            }
             const btn = document.getElementById('stl-wireframe-btn');
             if (btn) {
                 btn.classList.toggle('border-[#1da1f2]', viewerState.wireframe);
@@ -466,7 +470,7 @@
             if (typeof window.selectPartRow === 'function') {
                 window.selectPartRow(partId);
             }
-            const part = (window.allParts || []).find(p => p.id === partId);
+            const part = (window.getAllPartsRef ? window.getAllPartsRef() : []).find(p => p.id === partId);
             if (!part || !window.partHasSlotFile(part, 'stl')) {
                 window.showToast('Este ítem no tiene archivo .stl disponible.');
                 return;
@@ -485,11 +489,13 @@
 
             disposeStlViewer();
 
-            const activeMeta = window.getActiveSlotMeta(part, 'stl');
-            const fileName = (activeMeta && activeMeta.name) ? activeMeta.name : `${part.codigo || 'pieza'}.stl`;
+            const activeList = window.getActiveSlotFiles(part, 'stl');
+            const fileNameLabel = activeList.length === 1
+                ? activeList[0].name
+                : `${activeList.length} archivos .stl`;
 
             titleEl.textContent = part.codigo ? `${part.codigo}${part.descripcion ? ' — ' + part.descripcion : ''}` : 'Visor 3D (.STL)';
-            filenameEl.textContent = fileName;
+            filenameEl.textContent = fileNameLabel;
             metaEl.textContent = 'Cargando geometría STL...';
             dimsEl.textContent = '';
             if (wireBtn) {
@@ -501,8 +507,8 @@
             modal.classList.remove('hidden');
 
             try {
-                const fileObj = await window.ensurePartSlotBuffer(part, 'stl');
-                if (!fileObj || !fileObj.data) {
+                const loadedFiles = await window.ensurePartSlotBuffers(part, 'stl');
+                if (!loadedFiles || loadedFiles.length === 0) {
                     throw new Error('No se pudo obtener el contenido binario del archivo .stl.');
                 }
 
@@ -538,33 +544,41 @@
                 scene.add(fillLight);
 
                 const loader = new STLLoader();
-                const geometry = loader.parse(fileObj.data);
-                if (!geometry.attributes.normal) {
-                    geometry.computeVertexNormals();
-                }
+                const group = new THREE.Group();
+                const geometries = [];
+                const materials = [];
+                const palette = [0xd8dee6, 0x9ec5e8, 0xb8c4d0, 0x8bb8e8, 0xcbd5e1];
+                let totalTriangles = 0;
 
-                const material = new THREE.MeshStandardMaterial({
-                    color: 0xd8dee6,
-                    metalness: 0.22,
-                    roughness: 0.42,
-                    side: THREE.DoubleSide
+                loadedFiles.forEach((fObj, idx) => {
+                    const geometry = loader.parse(fObj.data);
+                    if (!geometry.attributes.normal) {
+                        geometry.computeVertexNormals();
+                    }
+                    const material = new THREE.MeshStandardMaterial({
+                        color: loadedFiles.length > 1 ? palette[idx % palette.length] : 0xd8dee6,
+                        metalness: 0.22,
+                        roughness: 0.42,
+                        side: THREE.DoubleSide
+                    });
+                    const mesh = new THREE.Mesh(geometry, material);
+                    group.add(mesh);
+                    geometries.push(geometry);
+                    materials.push(material);
+
+                    totalTriangles += geometry.index
+                        ? Math.floor(geometry.index.count / 3)
+                        : Math.floor((geometry.attributes.position ? geometry.attributes.position.count : 0) / 3);
                 });
 
-                const mesh = new THREE.Mesh(geometry, material);
-                scene.add(mesh);
+                scene.add(group);
+                fitCameraToObject(group, camera, controls);
 
-                fitCameraToObject(mesh, camera, controls);
-
-                geometry.computeBoundingBox();
-                const bb = geometry.boundingBox;
+                const bb = new THREE.Box3().setFromObject(group);
                 const size = new THREE.Vector3();
                 bb.getSize(size);
 
-                const triCount = geometry.index
-                    ? Math.floor(geometry.index.count / 3)
-                    : Math.floor((geometry.attributes.position ? geometry.attributes.position.count : 0) / 3);
-
-                metaEl.textContent = `${fileName} • ${triCount.toLocaleString('es-AR')} triángulos`;
+                metaEl.textContent = `${fileNameLabel} • ${totalTriangles.toLocaleString('es-AR')} triángulos`;
                 dimsEl.textContent = `X: ${size.x.toFixed(2)} • Y: ${size.y.toFixed(2)} • Z: ${size.z.toFixed(2)}`;
 
                 viewerState = {
@@ -572,9 +586,9 @@
                     camera,
                     renderer,
                     controls,
-                    mesh,
-                    geometry,
-                    material,
+                    group,
+                    geometries,
+                    materials,
                     animationId: null,
                     resizeObserver: null,
                     wireframe: false,
@@ -624,7 +638,7 @@
         const DEFAULT_SUPABASE_URL = 'https://sksanvauywgjxmxujicl.supabase.co';
         const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_2fuRdNLrO24nN5HA6e8lmw_v6IYVleX';
 
-        const DB_NAME = 'DataWaves_CAD_IPT_STL_DB_V16';
+        const DB_NAME = 'DataWaves_CAD_IPT_STL_DB_V17';
         const DB_VERSION = 1;
         const STORE_NAME = 'parts';
         const ADMIN_SECRET = 'datawaves';
@@ -637,6 +651,7 @@
         let allParts = [];
         let baselineSnapshots = new Map();
         let draftRows = [];
+        // pendingRowFiles[rowOrPartId] = { ipt?: FileEntry[], stl?: FileEntry[] } (undefined = sin cambio, [] = eliminar todos)
         let pendingRowFiles = {};
         let isAdmin = false;
         let selectedPartId = null;
@@ -645,50 +660,345 @@
         let savedPopupTimer = null;
         let filterDebounceTimer = null;
 
+        // blobUrlCache: key `${partId}:${slot}` -> { url, signature, fileName }
         const blobUrlCache = new Map();
         const inFlightDownloads = new Map();
 
-        function getFileExtensionType(fileName) {
+        function getFileExtensionSlot(fileName) {
             const lower = String(fileName || '').trim().toLowerCase();
             if (lower.endsWith('.stl')) return 'stl';
-            return 'ipt';
+            return 'ipt'; // Agrupa .iam y .ipt en el slot CAD/Inventor
         }
 
-        function getSlotFieldKey(slot) {
-            return slot === 'stl' ? 'stlFile' : 'iptFile';
+        function isIamFileName(fileName) {
+            return String(fileName || '').trim().toLowerCase().endsWith('.iam');
         }
 
-        function serializePresetShapeWithStl(stlFile) {
-            if (!stlFile || !stlFile.storagePath) return 'ipt_service';
+        function normalizeFileArray(val, fallbackName = '') {
+            if (!val) return [];
+            if (Array.isArray(val)) return val.filter(Boolean);
+            if (typeof val === 'object' && (val.name || val.storagePath || val.data)) {
+                return [{
+                    name: val.name || fallbackName,
+                    size: val.size || 0,
+                    type: val.type || 'application/octet-stream',
+                    storagePath: val.storagePath || null,
+                    data: val.data || null
+                }];
+            }
+            return [];
+        }
+
+        function serializeFilesMetadata(iptFiles, stlFiles) {
+            const iptMeta = (iptFiles || []).filter(f => f && f.storagePath).map(f => ({
+                name: f.name || '',
+                size: f.size || 0,
+                path: f.storagePath
+            }));
+            const stlMeta = (stlFiles || []).filter(f => f && f.storagePath).map(f => ({
+                name: f.name || '',
+                size: f.size || 0,
+                path: f.storagePath
+            }));
+            if (iptMeta.length === 0 && stlMeta.length === 0) return 'ipt_service';
             return JSON.stringify({
-                v: 2,
-                stl: {
-                    name: stlFile.name || '',
-                    size: stlFile.size || 0,
-                    path: stlFile.storagePath
-                }
+                v: 3,
+                iptList: iptMeta,
+                stlList: stlMeta,
+                stl: stlMeta[0] || null
             });
         }
 
-        function parseStlFromPresetShape(presetShape, rowCodigo, localMatch) {
-            if (!presetShape || typeof presetShape !== 'string') {
-                return localMatch && localMatch.stlFile ? localMatch.stlFile : null;
-            }
-            if (presetShape.startsWith('{')) {
+        function parseFilesFromRow(row, localMatch) {
+            const localIptMap = new Map(normalizeFileArray(localMatch && (localMatch.iptFiles || localMatch.iptFile)).map(f => [f.storagePath || f.name, f]));
+            const localStlMap = new Map(normalizeFileArray(localMatch && (localMatch.stlFiles || localMatch.stlFile)).map(f => [f.storagePath || f.name, f]));
+
+            let iptFiles = [];
+            let stlFiles = [];
+            let parsedV3 = false;
+
+            if (row.preset_shape && typeof row.preset_shape === 'string' && row.preset_shape.startsWith('{')) {
                 try {
-                    const parsed = JSON.parse(presetShape);
-                    if (parsed && parsed.stl && parsed.stl.path) {
-                        return {
-                            name: parsed.stl.name || `${rowCodigo || 'pieza'}.stl`,
+                    const parsed = JSON.parse(row.preset_shape);
+                    if (parsed && parsed.v >= 3) {
+                        parsedV3 = true;
+                        iptFiles = (parsed.iptList || []).filter(x => x && x.path).map(x => {
+                            const lm = localIptMap.get(x.path) || localIptMap.get(x.name);
+                            return {
+                                name: x.name || `${row.codigo || 'pieza'}.ipt`,
+                                size: x.size || 0,
+                                type: 'application/octet-stream',
+                                storagePath: x.path,
+                                data: lm ? lm.data : null
+                            };
+                        });
+                        stlFiles = (parsed.stlList || []).filter(x => x && x.path).map(x => {
+                            const lm = localStlMap.get(x.path) || localStlMap.get(x.name);
+                            return {
+                                name: x.name || `${row.codigo || 'pieza'}.stl`,
+                                size: x.size || 0,
+                                type: 'application/octet-stream',
+                                storagePath: x.path,
+                                data: lm ? lm.data : null
+                            };
+                        });
+                    } else if (parsed && parsed.stl && parsed.stl.path) {
+                        const lm = localStlMap.get(parsed.stl.path) || localStlMap.get(parsed.stl.name);
+                        stlFiles = [{
+                            name: parsed.stl.name || `${row.codigo || 'pieza'}.stl`,
                             size: parsed.stl.size || 0,
                             type: 'application/octet-stream',
                             storagePath: parsed.stl.path,
-                            data: localMatch && localMatch.stlFile ? localMatch.stlFile.data : null
-                        };
+                            data: lm ? lm.data : null
+                        }];
                     }
                 } catch (_) {}
             }
-            return localMatch && localMatch.stlFile ? localMatch.stlFile : null;
+
+            if (!parsedV3 && iptFiles.length === 0 && row.ipt_path) {
+                const lm = localIptMap.get(row.ipt_path) || localIptMap.get(row.ipt_name);
+                iptFiles = [{
+                    name: row.ipt_name || `${row.codigo || 'pieza'}.ipt`,
+                    size: row.ipt_size || 0,
+                    type: 'application/octet-stream',
+                    storagePath: row.ipt_path,
+                    data: lm ? lm.data : null
+                }];
+            }
+
+            return { iptFiles, stlFiles };
+        }
+
+        function getActiveSlotFiles(part, slot) {
+            if (!part) return [];
+            const pendingObj = pendingRowFiles[part.id];
+            if (pendingObj && Object.prototype.hasOwnProperty.call(pendingObj, slot)) {
+                return Array.isArray(pendingObj[slot]) ? pendingObj[slot] : [];
+            }
+            const field = slot === 'stl' ? 'stlFiles' : 'iptFiles';
+            return normalizeFileArray(part[field] || part[slot === 'stl' ? 'stlFile' : 'iptFile']);
+        }
+
+        function partHasSlotFile(part, slot) {
+            const list = getActiveSlotFiles(part, slot);
+            return list.some(f => f && (f.data || f.storagePath));
+        }
+
+        function getSlotDisplayInfo(part, slot) {
+            const files = getActiveSlotFiles(part, slot);
+            if (files.length === 0) return null;
+
+            if (slot === 'stl') {
+                const label = files.length > 1 ? `.stl (${files.length})` : '.stl';
+                const downloadName = files.length > 1
+                    ? `${(part.codigo || 'modelos_stl').replace(/[^a-zA-Z0-9._-]/g, '_')}_stl.zip`
+                    : (files[0].name || `${part.codigo || 'pieza'}.stl`);
+                return { label, downloadName, count: files.length, hasIam: false, files };
+            }
+
+            const iamFile = files.find(f => isIamFileName(f.name));
+            const hasIam = Boolean(iamFile);
+            let label;
+            if (hasIam) {
+                label = files.length > 1 ? `.iam (${files.length})` : '.iam';
+            } else {
+                label = files.length > 1 ? `.ipt (${files.length})` : '.ipt';
+            }
+
+            let downloadName;
+            if (files.length === 1) {
+                downloadName = files[0].name || `${part.codigo || 'pieza'}${hasIam ? '.iam' : '.ipt'}`;
+            } else {
+                const baseName = iamFile
+                    ? iamFile.name.replace(/\.iam$/i, '')
+                    : (part.codigo || 'ensamble');
+                downloadName = `${baseName.replace(/[^a-zA-Z0-9._-]/g, '_')}.zip`;
+            }
+
+            return { label, downloadName, count: files.length, hasIam, files };
+        }
+
+        function getPublicStorageUrl(storagePath) {
+            if (!storagePath || !supabaseClient) return null;
+            const { data } = supabaseClient.storage.from(SB_BUCKET).getPublicUrl(storagePath);
+            return data && data.publicUrl ? data.publicUrl : null;
+        }
+
+        async function ensureSingleFileBuffer(part, slot, fileEntry) {
+            if (!fileEntry) return null;
+            if (fileEntry.data) return fileEntry;
+
+            if (fileEntry.storagePath && isSupabaseConnected && supabaseClient) {
+                const flightKey = `${part.id}:${slot}:${fileEntry.storagePath}`;
+                if (inFlightDownloads.has(flightKey)) {
+                    return await inFlightDownloads.get(flightKey);
+                }
+                const promise = (async () => {
+                    try {
+                        const { data, error } = await supabaseClient.storage
+                            .from(SB_BUCKET)
+                            .download(fileEntry.storagePath);
+                        if (!error && data) {
+                            fileEntry.data = await data.arrayBuffer();
+                            fileEntry.size = fileEntry.size || fileEntry.data.byteLength;
+                            await savePartToDB(part).catch(() => {});
+                            return fileEntry;
+                        }
+                    } finally {
+                        inFlightDownloads.delete(flightKey);
+                    }
+                    return null;
+                })();
+                inFlightDownloads.set(flightKey, promise);
+                return await promise;
+            }
+            return null;
+        }
+
+        async function ensurePartSlotBuffers(part, slot) {
+            const files = getActiveSlotFiles(part, slot);
+            if (files.length === 0) return [];
+            const loaded = await Promise.all(files.map(f => ensureSingleFileBuffer(part, slot, f)));
+            const valid = loaded.filter(f => f && f.data);
+            if (valid.length === files.length) {
+                await buildOrRefreshSlotBlobUrl(part, slot);
+            }
+            return valid;
+        }
+
+        function getSlotSignature(files) {
+            return files.map(f => `${f.name}:${f.size}:${f.storagePath || ''}:${f.data ? f.data.byteLength : 0}`).join('|');
+        }
+
+        async function buildOrRefreshSlotBlobUrl(part, slot) {
+            const info = getSlotDisplayInfo(part, slot);
+            if (!info || info.files.length === 0) return null;
+
+            const allHaveData = info.files.every(f => Boolean(f.data));
+            if (!allHaveData) return null;
+
+            const cacheKey = `${part.id}:${slot}`;
+            const sig = getSlotSignature(info.files);
+            const cached = blobUrlCache.get(cacheKey);
+            if (cached && cached.signature === sig) {
+                return cached.url;
+            }
+            if (cached && cached.url) {
+                URL.revokeObjectURL(cached.url);
+            }
+
+            let blob;
+            if (info.files.length === 1) {
+                blob = new Blob([info.files[0].data], { type: 'application/octet-stream' });
+            } else if (window.JSZip) {
+                const zip = new JSZip();
+                const usedNames = new Set();
+                for (const f of info.files) {
+                    let entryName = f.name || 'archivo';
+                    if (usedNames.has(entryName.toLowerCase())) {
+                        entryName = `${usedNames.size}_${entryName}`;
+                    }
+                    usedNames.add(entryName.toLowerCase());
+                    zip.file(entryName, f.data);
+                }
+                blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
+            } else {
+                blob = new Blob([info.files[0].data], { type: 'application/octet-stream' });
+            }
+
+            const url = URL.createObjectURL(blob);
+            blobUrlCache.set(cacheKey, { url, signature: sig, fileName: info.downloadName });
+            return url;
+        }
+
+        function getCachedSlotBlobUrl(part, slot) {
+            const info = getSlotDisplayInfo(part, slot);
+            if (!info) return null;
+            const cacheKey = `${part.id}:${slot}`;
+            const cached = blobUrlCache.get(cacheKey);
+            if (cached && cached.signature === getSlotSignature(info.files)) {
+                return cached.url;
+            }
+            return null;
+        }
+
+        function invalidatePartSlotBlobUrl(partId, slot = null) {
+            const slots = slot ? [slot] : ['ipt', 'stl'];
+            for (const s of slots) {
+                const cacheKey = `${partId}:${s}`;
+                const cached = blobUrlCache.get(cacheKey);
+                if (cached && cached.url) {
+                    URL.revokeObjectURL(cached.url);
+                }
+                blobUrlCache.delete(cacheKey);
+            }
+        }
+
+        async function warmUpAllPartBlobs(partsList, concurrency = 4) {
+            const tasks = [];
+            for (const p of partsList) {
+                if (partHasSlotFile(p, 'ipt')) tasks.push({ part: p, slot: 'ipt' });
+                if (partHasSlotFile(p, 'stl')) tasks.push({ part: p, slot: 'stl' });
+            }
+            if (tasks.length === 0) return;
+
+            let idx = 0;
+            const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, async () => {
+                while (idx < tasks.length) {
+                    const current = tasks[idx++];
+                    await ensurePartSlotBuffers(current.part, current.slot);
+                }
+            });
+            await Promise.all(workers);
+        }
+
+        function handleSlotDragStart(event, partId, slot) {
+            selectPartRow(partId);
+            const part = allParts.find(p => p.id === partId);
+            const info = part && getSlotDisplayInfo(part, slot);
+            if (!part || !info) {
+                event.preventDefault();
+                return;
+            }
+
+            let dragUrl = getCachedSlotBlobUrl(part, slot);
+            if (!dragUrl && info.files.length === 1 && info.files[0].storagePath) {
+                dragUrl = getPublicStorageUrl(info.files[0].storagePath);
+            }
+            if (!dragUrl) {
+                ensurePartSlotBuffers(part, slot);
+                showToast('Preparando descarga del paquete, intenta arrastrar nuevamente en 1 segundo.');
+                event.preventDefault();
+                return;
+            }
+
+            const mime = info.files.length > 1 ? 'application/zip' : 'application/octet-stream';
+            event.dataTransfer.setData('DownloadURL', `${mime}:${info.downloadName}:${dragUrl}`);
+            event.dataTransfer.setData('text/plain', info.downloadName);
+            event.dataTransfer.effectAllowed = 'copy';
+        }
+
+        async function downloadPartSlotFile(partId, slot) {
+            selectPartRow(partId);
+            const part = allParts.find(p => p.id === partId);
+            const info = part && getSlotDisplayInfo(part, slot);
+            if (!part || !info) return;
+
+            const loaded = await ensurePartSlotBuffers(part, slot);
+            if (!loaded || loaded.length === 0) {
+                showToast(`No se pudo obtener el archivo .${slot}.`);
+                return;
+            }
+
+            const url = await buildOrRefreshSlotBlobUrl(part, slot);
+            if (!url) return;
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = info.downloadName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
 
         function getCategoryKey(part) {
@@ -773,168 +1083,6 @@
             }
         }
 
-        function partHasSlotFile(part, slot) {
-            if (!part) return false;
-            const pendingObj = pendingRowFiles[part.id];
-            if (pendingObj && Object.prototype.hasOwnProperty.call(pendingObj, slot)) {
-                return Boolean(pendingObj[slot]);
-            }
-            const field = getSlotFieldKey(slot);
-            return Boolean(part[field] && (part[field].data || part[field].storagePath));
-        }
-
-        function getActiveSlotMeta(part, slot) {
-            const pendingObj = pendingRowFiles[part.id];
-            if (pendingObj && Object.prototype.hasOwnProperty.call(pendingObj, slot)) {
-                return pendingObj[slot];
-            }
-            const field = getSlotFieldKey(slot);
-            return part[field] || null;
-        }
-
-        function getPublicStorageUrl(storagePath) {
-            if (!storagePath || !supabaseClient) return null;
-            const { data } = supabaseClient.storage.from(SB_BUCKET).getPublicUrl(storagePath);
-            return data && data.publicUrl ? data.publicUrl : null;
-        }
-
-        async function ensurePartSlotBuffer(part, slot) {
-            if (!part) return null;
-            const pendingObj = pendingRowFiles[part.id];
-            if (pendingObj && Object.prototype.hasOwnProperty.call(pendingObj, slot)) {
-                return pendingObj[slot] && pendingObj[slot].data ? pendingObj[slot] : null;
-            }
-            const field = getSlotFieldKey(slot);
-            const fileMeta = part[field];
-            if (!fileMeta) return null;
-            if (fileMeta.data) return fileMeta;
-
-            if (fileMeta.storagePath && isSupabaseConnected && supabaseClient) {
-                const flightKey = `${part.id}:${slot}`;
-                if (inFlightDownloads.has(flightKey)) {
-                    return await inFlightDownloads.get(flightKey);
-                }
-                const promise = (async () => {
-                    try {
-                        const { data, error } = await supabaseClient.storage
-                            .from(SB_BUCKET)
-                            .download(fileMeta.storagePath);
-                        if (!error && data) {
-                            fileMeta.data = await data.arrayBuffer();
-                            fileMeta.size = fileMeta.size || fileMeta.data.byteLength;
-                            getOrCreatePartSlotBlobUrl(part, slot);
-                            await savePartToDB(part).catch(() => {});
-                            return fileMeta;
-                        }
-                    } finally {
-                        inFlightDownloads.delete(flightKey);
-                    }
-                    return null;
-                })();
-                inFlightDownloads.set(flightKey, promise);
-                return await promise;
-            }
-            return null;
-        }
-
-        function getOrCreatePartSlotBlobUrl(part, slot) {
-            const active = getActiveSlotMeta(part, slot);
-            if (!active || !active.data) return null;
-            const cacheKey = `${part.id}:${slot}`;
-            const cached = blobUrlCache.get(cacheKey);
-            if (cached && cached.bufferRef === active.data && cached.name === active.name) {
-                return cached.url;
-            }
-            if (cached && cached.url) {
-                URL.revokeObjectURL(cached.url);
-            }
-            const blob = new Blob([active.data], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
-            blobUrlCache.set(cacheKey, { url, bufferRef: active.data, name: active.name });
-            return url;
-        }
-
-        function invalidatePartSlotBlobUrl(partId, slot = null) {
-            const slots = slot ? [slot] : ['ipt', 'stl'];
-            for (const s of slots) {
-                const cacheKey = `${partId}:${s}`;
-                const cached = blobUrlCache.get(cacheKey);
-                if (cached && cached.url) {
-                    URL.revokeObjectURL(cached.url);
-                }
-                blobUrlCache.delete(cacheKey);
-            }
-        }
-
-        async function warmUpAllPartBlobs(partsList, concurrency = 4) {
-            const tasks = [];
-            for (const p of partsList) {
-                if (p.iptFile && p.iptFile.storagePath && !p.iptFile.data) {
-                    tasks.push({ part: p, slot: 'ipt' });
-                }
-                if (p.stlFile && p.stlFile.storagePath && !p.stlFile.data) {
-                    tasks.push({ part: p, slot: 'stl' });
-                }
-            }
-            if (tasks.length === 0) return;
-
-            let idx = 0;
-            const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, async () => {
-                while (idx < tasks.length) {
-                    const current = tasks[idx++];
-                    await ensurePartSlotBuffer(current.part, current.slot);
-                }
-            });
-            await Promise.all(workers);
-        }
-
-        function handleSlotDragStart(event, partId, slot) {
-            selectPartRow(partId);
-            const part = allParts.find(p => p.id === partId);
-            if (!part || !partHasSlotFile(part, slot)) {
-                event.preventDefault();
-                return;
-            }
-            const active = getActiveSlotMeta(part, slot);
-            const defaultExt = slot === 'stl' ? '.stl' : '.ipt';
-            const fileName = (active && active.name) ? active.name : `${part.codigo || 'pieza'}${defaultExt}`;
-
-            const dragUrl = getOrCreatePartSlotBlobUrl(part, slot) || getPublicStorageUrl(active && active.storagePath);
-            if (!dragUrl) {
-                event.preventDefault();
-                return;
-            }
-
-            event.dataTransfer.setData('DownloadURL', `application/octet-stream:${fileName}:${dragUrl}`);
-            event.dataTransfer.setData('text/plain', fileName);
-            event.dataTransfer.effectAllowed = 'copy';
-
-            if (!getOrCreatePartSlotBlobUrl(part, slot)) {
-                ensurePartSlotBuffer(part, slot);
-            }
-        }
-
-        async function downloadPartSlotFile(partId, slot) {
-            selectPartRow(partId);
-            const part = allParts.find(p => p.id === partId);
-            if (!part || !partHasSlotFile(part, slot)) return;
-
-            const fileObj = await ensurePartSlotBuffer(part, slot);
-            if (!fileObj || !fileObj.data) {
-                showToast(`No se pudo obtener el archivo .${slot}.`);
-                return;
-            }
-
-            const defaultExt = slot === 'stl' ? '.stl' : '.ipt';
-            const url = getOrCreatePartSlotBlobUrl(part, slot);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = fileObj.name || `${part.codigo || 'pieza'}${defaultExt}`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        }
-
         function showSavedPopup() {
             const popup = document.getElementById('saved-popup');
             if (!popup) return;
@@ -957,13 +1105,15 @@
         }
 
         function buildSearchIndex(part) {
+            const iptNames = normalizeFileArray(part.iptFiles).map(f => f.name).join(' ');
+            const stlNames = normalizeFileArray(part.stlFiles).map(f => f.name).join(' ');
             part._searchNorm = normalizeText([
                 part.codigo,
                 part.descripcion,
                 part.categoria,
                 part.observaciones,
-                part.iptFile ? part.iptFile.name : '',
-                part.stlFile ? part.stlFile.name : ''
+                iptNames,
+                stlNames
             ].join(' '));
         }
 
@@ -1020,7 +1170,7 @@
                 const hasVal = [c ? c.value : r.codigo, d ? d.value : r.descripcion, cat ? cat.value : r.categoria, obs ? obs.value : r.observaciones]
                     .some(x => String(x || '').trim() !== '');
                 const pFiles = pendingRowFiles[r.id];
-                const hasDraftFiles = Boolean(pFiles && (pFiles.ipt || pFiles.stl));
+                const hasDraftFiles = Boolean((pFiles && pFiles.ipt && pFiles.ipt.length > 0) || (pFiles && pFiles.stl && pFiles.stl.length > 0));
                 if (hasVal || hasDraftFiles) count++;
             }
             if (count > 0) {
@@ -1058,8 +1208,8 @@
 
             const scorePart = p => {
                 let s = 0;
-                if (p.iptFile && (p.iptFile.data || p.iptFile.storagePath)) s += 100;
-                if (p.stlFile && (p.stlFile.data || p.stlFile.storagePath)) s += 100;
+                s += normalizeFileArray(p.iptFiles).length * 100;
+                s += normalizeFileArray(p.stlFiles).length * 100;
                 if ((p.descripcion || '').trim()) s += 2;
                 if ((p.categoria || '').trim()) s += 2;
                 if ((p.observaciones || '').trim()) s += 1;
@@ -1086,9 +1236,10 @@
 
             if (duplicatesToDelete.length > 0 && isSupabaseConnected && supabaseClient) {
                 await Promise.all(duplicatesToDelete.map(async dup => {
-                    const paths = [];
-                    if (dup.iptFile && dup.iptFile.storagePath) paths.push(dup.iptFile.storagePath);
-                    if (dup.stlFile && dup.stlFile.storagePath) paths.push(dup.stlFile.storagePath);
+                    const paths = [
+                        ...normalizeFileArray(dup.iptFiles).map(f => f.storagePath),
+                        ...normalizeFileArray(dup.stlFiles).map(f => f.storagePath)
+                    ].filter(Boolean);
                     if (paths.length > 0) {
                         await supabaseClient.storage.from(SB_BUCKET).remove(paths);
                     }
@@ -1103,7 +1254,11 @@
         async function fetchAllParts(skipDedup = false) {
             const localParts = await getAllPartsFromDB();
             const localMap = new Map(localParts.map(x => [x.id, x]));
-            let rawParts = localParts;
+            let rawParts = localParts.map(lp => ({
+                ...lp,
+                iptFiles: normalizeFileArray(lp.iptFiles || lp.iptFile),
+                stlFiles: normalizeFileArray(lp.stlFiles || lp.stlFile)
+            }));
 
             if (isSupabaseConnected && supabaseClient) {
                 const { data, error } = await supabaseClient.from(SB_TABLE).select('*').order('codigo', { ascending: true });
@@ -1112,6 +1267,7 @@
                 } else {
                     rawParts = (data || []).map(row => {
                         const localMatch = localMap.get(row.id);
+                        const { iptFiles, stlFiles } = parseFilesFromRow(row, localMatch);
                         return {
                             id: row.id,
                             codigo: row.codigo || '',
@@ -1119,14 +1275,8 @@
                             categoria: row.categoria || '',
                             observaciones: row.observaciones || '',
                             date: row.updated_at || '',
-                            iptFile: row.ipt_path ? {
-                                name: row.ipt_name || `${row.codigo || 'pieza'}.ipt`,
-                                size: row.ipt_size || 0,
-                                type: 'application/octet-stream',
-                                storagePath: row.ipt_path,
-                                data: localMatch && localMatch.iptFile ? localMatch.iptFile.data : null
-                            } : null,
-                            stlFile: parseStlFromPresetShape(row.preset_shape, row.codigo, localMatch)
+                            iptFiles,
+                            stlFiles
                         };
                     });
                 }
@@ -1141,12 +1291,44 @@
 
             for (const p of finalParts) {
                 buildSearchIndex(p);
-                if (p.iptFile && p.iptFile.data) getOrCreatePartSlotBlobUrl(p, 'ipt');
-                if (p.stlFile && p.stlFile.data) getOrCreatePartSlotBlobUrl(p, 'stl');
+                if (p.iptFiles.length > 0 && p.iptFiles.every(f => f.data)) buildOrRefreshSlotBlobUrl(p, 'ipt');
+                if (p.stlFiles.length > 0 && p.stlFiles.every(f => f.data)) buildOrRefreshSlotBlobUrl(p, 'stl');
             }
             captureBaselineSnapshots(finalParts);
             warmUpAllPartBlobs(finalParts);
             return finalParts;
+        }
+
+        async function syncSlotFilesToStorage(partId, slot, currentFiles, targetFiles, pathsToRemove) {
+            const keptPaths = new Set(targetFiles.filter(f => f.storagePath).map(f => f.storagePath));
+            for (const oldF of currentFiles) {
+                if (oldF.storagePath && !keptPaths.has(oldF.storagePath)) {
+                    pathsToRemove.push(oldF.storagePath);
+                }
+            }
+
+            const finalFiles = [];
+            for (let i = 0; i < targetFiles.length; i++) {
+                const entry = targetFiles[i];
+                if (entry.storagePath && !entry._isNewUpload) {
+                    finalFiles.push(entry);
+                } else if (entry.data) {
+                    const cleanName = entry.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+                    const newPath = `${partId}/${slot}_${Date.now()}_${i}_${cleanName}`;
+                    const blob = new Blob([entry.data], { type: 'application/octet-stream' });
+                    const { error: uploadErr } = await supabaseClient.storage.from(SB_BUCKET).upload(newPath, blob, { upsert: true });
+                    if (uploadErr) throw new Error(`Storage (.${slot}): ` + uploadErr.message);
+
+                    finalFiles.push({
+                        name: entry.name,
+                        size: entry.data.byteLength,
+                        type: 'application/octet-stream',
+                        storagePath: newPath,
+                        data: entry.data
+                    });
+                }
+            }
+            return finalFiles;
         }
 
         async function persistPartRecord(partObj, slotChanges = {}) {
@@ -1156,68 +1338,27 @@
             }
 
             const pathsToRemove = [];
+            partObj.iptFiles = normalizeFileArray(partObj.iptFiles || partObj.iptFile);
+            partObj.stlFiles = normalizeFileArray(partObj.stlFiles || partObj.stlFile);
 
             if (Object.prototype.hasOwnProperty.call(slotChanges, 'ipt')) {
-                const change = slotChanges.ipt;
-                if (change === null) {
-                    if (partObj.iptFile && partObj.iptFile.storagePath) {
-                        pathsToRemove.push(partObj.iptFile.storagePath);
-                    }
-                    partObj.iptFile = null;
-                    invalidatePartSlotBlobUrl(partObj.id, 'ipt');
-                } else if (change && change.data) {
-                    if (partObj.iptFile && partObj.iptFile.storagePath) {
-                        pathsToRemove.push(partObj.iptFile.storagePath);
-                    }
-                    const cleanName = change.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-                    const newPath = `${partObj.id}/ipt_${Date.now()}_${cleanName}`;
-                    const blob = new Blob([change.data], { type: 'application/octet-stream' });
-                    const { error: uploadErr } = await supabaseClient.storage.from(SB_BUCKET).upload(newPath, blob, { upsert: true });
-                    if (uploadErr) throw new Error('Storage (.ipt): ' + uploadErr.message);
-
-                    partObj.iptFile = {
-                        name: change.name,
-                        size: change.data.byteLength,
-                        type: 'application/octet-stream',
-                        storagePath: newPath,
-                        data: change.data
-                    };
-                    invalidatePartSlotBlobUrl(partObj.id, 'ipt');
-                }
+                const targetList = Array.isArray(slotChanges.ipt) ? slotChanges.ipt : [];
+                partObj.iptFiles = await syncSlotFilesToStorage(partObj.id, 'ipt', partObj.iptFiles, targetList, pathsToRemove);
+                invalidatePartSlotBlobUrl(partObj.id, 'ipt');
             }
 
             if (Object.prototype.hasOwnProperty.call(slotChanges, 'stl')) {
-                const change = slotChanges.stl;
-                if (change === null) {
-                    if (partObj.stlFile && partObj.stlFile.storagePath) {
-                        pathsToRemove.push(partObj.stlFile.storagePath);
-                    }
-                    partObj.stlFile = null;
-                    invalidatePartSlotBlobUrl(partObj.id, 'stl');
-                } else if (change && change.data) {
-                    if (partObj.stlFile && partObj.stlFile.storagePath) {
-                        pathsToRemove.push(partObj.stlFile.storagePath);
-                    }
-                    const cleanName = change.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-                    const newPath = `${partObj.id}/stl_${Date.now()}_${cleanName}`;
-                    const blob = new Blob([change.data], { type: 'application/octet-stream' });
-                    const { error: uploadErr } = await supabaseClient.storage.from(SB_BUCKET).upload(newPath, blob, { upsert: true });
-                    if (uploadErr) throw new Error('Storage (.stl): ' + uploadErr.message);
-
-                    partObj.stlFile = {
-                        name: change.name,
-                        size: change.data.byteLength,
-                        type: 'application/octet-stream',
-                        storagePath: newPath,
-                        data: change.data
-                    };
-                    invalidatePartSlotBlobUrl(partObj.id, 'stl');
-                }
+                const targetList = Array.isArray(slotChanges.stl) ? slotChanges.stl : [];
+                partObj.stlFiles = await syncSlotFilesToStorage(partObj.id, 'stl', partObj.stlFiles, targetList, pathsToRemove);
+                invalidatePartSlotBlobUrl(partObj.id, 'stl');
             }
 
             if (pathsToRemove.length > 0) {
                 await supabaseClient.storage.from(SB_BUCKET).remove(pathsToRemove).catch(() => {});
             }
+
+            const primaryCad = partObj.iptFiles.find(f => isIamFileName(f.name)) || partObj.iptFiles[0] || null;
+            const totalCadSize = partObj.iptFiles.reduce((acc, f) => acc + (f.size || 0), 0);
 
             const { error: dbError } = await supabaseClient.from(SB_TABLE).upsert({
                 id: partObj.id,
@@ -1225,17 +1366,19 @@
                 descripcion: partObj.descripcion,
                 categoria: partObj.categoria,
                 observaciones: partObj.observaciones,
-                ipt_name: partObj.iptFile ? partObj.iptFile.name : null,
-                ipt_size: partObj.iptFile ? partObj.iptFile.size : 0,
-                ipt_path: partObj.iptFile ? partObj.iptFile.storagePath : null,
-                preset_shape: serializePresetShapeWithStl(partObj.stlFile),
+                ipt_name: primaryCad ? primaryCad.name : null,
+                ipt_size: totalCadSize,
+                ipt_path: primaryCad ? primaryCad.storagePath : null,
+                preset_shape: serializeFilesMetadata(partObj.iptFiles, partObj.stlFiles),
                 updated_at: new Date().toISOString().split('T')[0]
             });
             if (dbError) throw new Error('Base de datos: ' + dbError.message);
 
+            delete partObj.iptFile;
+            delete partObj.stlFile;
             buildSearchIndex(partObj);
-            if (partObj.iptFile && partObj.iptFile.data) getOrCreatePartSlotBlobUrl(partObj, 'ipt');
-            if (partObj.stlFile && partObj.stlFile.data) getOrCreatePartSlotBlobUrl(partObj, 'stl');
+            if (partObj.iptFiles.length > 0 && partObj.iptFiles.every(f => f.data)) await buildOrRefreshSlotBlobUrl(partObj, 'ipt');
+            if (partObj.stlFiles.length > 0 && partObj.stlFiles.every(f => f.data)) await buildOrRefreshSlotBlobUrl(partObj, 'stl');
             await savePartToDB(partObj);
             return true;
         }
@@ -1245,9 +1388,10 @@
                 showToast('No hay conexión activa con Supabase.');
                 return false;
             }
-            const paths = [];
-            if (part.iptFile && part.iptFile.storagePath) paths.push(part.iptFile.storagePath);
-            if (part.stlFile && part.stlFile.storagePath) paths.push(part.stlFile.storagePath);
+            const paths = [
+                ...normalizeFileArray(part.iptFiles).map(f => f.storagePath),
+                ...normalizeFileArray(part.stlFiles).map(f => f.storagePath)
+            ].filter(Boolean);
             if (paths.length > 0) {
                 await supabaseClient.storage.from(SB_BUCKET).remove(paths);
             }
@@ -1334,7 +1478,7 @@
                 const startRow = hasHeader ? 1 : 0;
                 draftRows = draftRows.filter(r => {
                     const p = pendingRowFiles[r.id];
-                    const hasFiles = Boolean(p && (p.ipt || p.stl));
+                    const hasFiles = Boolean((p && p.ipt && p.ipt.length > 0) || (p && p.stl && p.stl.length > 0));
                     return (r.codigo || r.descripcion || r.categoria || r.observaciones || '').trim() !== '' || hasFiles;
                 });
 
@@ -1412,22 +1556,44 @@
             updatePendingChangesIndicator();
         }
 
-        async function onDraftSlotFileSelected(rowId, slot, event) {
-            const file = event.target.files && event.target.files[0];
-            if (!file) return;
+        function appendFilesToSlotList(existingList, newEntries) {
+            const list = [...existingList];
+            for (const entry of newEntries) {
+                const idx = list.findIndex(x => (x.name || '').toLowerCase() === (entry.name || '').toLowerCase());
+                if (idx !== -1) list[idx] = entry;
+                else list.push(entry);
+            }
+            return list;
+        }
+
+        async function onDraftSlotFilesSelected(rowId, slot, event) {
+            const files = Array.from(event.target.files || []);
+            if (files.length === 0) return;
             syncDraftInputsFromDOM();
-            const buf = await file.arrayBuffer();
+
             if (!pendingRowFiles[rowId]) pendingRowFiles[rowId] = {};
-            pendingRowFiles[rowId][slot] = { name: file.name, size: buf.byteLength, data: buf };
+            const newEntries = [];
+            for (const file of files) {
+                const buf = await file.arrayBuffer();
+                newEntries.push({
+                    name: file.name,
+                    size: buf.byteLength,
+                    data: buf,
+                    _isNewUpload: true
+                });
+            }
+            pendingRowFiles[rowId][slot] = appendFilesToSlotList(pendingRowFiles[rowId][slot] || [], newEntries);
 
             const row = draftRows.find(r => r.id === rowId);
             if (row && !row.codigo) {
-                const candidate = file.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
+                const preferred = files.find(f => isIamFileName(f.name)) || files[0];
+                const candidate = preferred.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
                 const key = normalizeCodeKey(candidate);
                 if (!key || !getKnownCodeKeys(rowId).has(key)) row.codigo = candidate;
             }
             renderDraftRows();
             updatePendingChangesIndicator();
+            event.target.value = '';
         }
 
         function removeDraftSlotFile(rowId, slot) {
@@ -1442,6 +1608,13 @@
             updatePendingChangesIndicator();
         }
 
+        function formatSlotSummaryText(list, fallbackLabel) {
+            if (!list || list.length === 0) return fallbackLabel;
+            if (list.length === 1) return list[0].name;
+            const iam = list.find(f => isIamFileName(f.name));
+            return iam ? `${iam.name} (+${list.length - 1})` : `${list.length} archivos`;
+        }
+
         function renderDraftRows() {
             const container = document.getElementById('draft-rows-container');
             if (!container) return;
@@ -1449,8 +1622,8 @@
 
             draftRows.forEach((row, idx) => {
                 const pFiles = pendingRowFiles[row.id] || {};
-                const iptAtt = pFiles.ipt || null;
-                const stlAtt = pFiles.stl || null;
+                const iptList = pFiles.ipt || [];
+                const stlList = pFiles.stl || [];
 
                 const div = document.createElement('div');
                 div.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center bg-[#1e2227] border border-[#353b42] rounded p-2';
@@ -1469,21 +1642,21 @@
                     </div>
                     <div class="lg:col-span-3 flex items-center justify-end gap-1.5">
                         <div class="flex-1 min-w-0 flex items-center gap-1">
-                            <label title="${iptAtt ? escapeHTML(iptAtt.name) : 'Adjuntar archivo .ipt'}" class="flex-1 min-w-0 cursor-pointer px-2 py-1 rounded ${iptAtt ? 'bg-[#1da1f2]/20 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#272b30] hover:bg-[#32373e] border-[#3e454e] text-[#d5dbe2]'} border text-[11px] font-mono truncate flex items-center justify-center gap-1">
+                            <label title="${iptList.length ? escapeHTML(iptList.map(f => f.name).join(', ')) : 'Adjuntar archivos .iam / .ipt'}" class="flex-1 min-w-0 cursor-pointer px-2 py-1 rounded ${iptList.length ? 'bg-[#1da1f2]/20 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#272b30] hover:bg-[#32373e] border-[#3e454e] text-[#d5dbe2]'} border text-[11px] font-mono truncate flex items-center justify-center gap-1">
                                 <i class="fa-solid fa-plus text-[#1da1f2] shrink-0"></i>
-                                <span class="truncate">${iptAtt ? escapeHTML(iptAtt.name) : '.ipt'}</span>
-                                <input type="file" accept=".ipt" class="hidden" onchange="onDraftSlotFileSelected('${row.id}', 'ipt', event)">
+                                <span class="truncate">${escapeHTML(formatSlotSummaryText(iptList, '.iam/.ipt'))}</span>
+                                <input type="file" accept=".ipt,.iam" multiple class="hidden" onchange="onDraftSlotFilesSelected('${row.id}', 'ipt', event)">
                             </label>
-                            ${iptAtt ? `<button type="button" onclick="removeDraftSlotFile('${row.id}', 'ipt')" title="Quitar .ipt" class="px-1.5 py-1 rounded bg-[#272b30] hover:bg-red-950/70 border border-[#3e454e] text-red-400 text-[11px]"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                            ${iptList.length ? `<button type="button" onclick="removeDraftSlotFile('${row.id}', 'ipt')" title="Quitar archivos CAD" class="px-1.5 py-1 rounded bg-[#272b30] hover:bg-red-950/70 border border-[#3e454e] text-red-400 text-[11px]"><i class="fa-solid fa-xmark"></i></button>` : ''}
                         </div>
 
                         <div class="flex-1 min-w-0 flex items-center gap-1">
-                            <label title="${stlAtt ? escapeHTML(stlAtt.name) : 'Adjuntar archivo .stl'}" class="flex-1 min-w-0 cursor-pointer px-2 py-1 rounded ${stlAtt ? 'bg-white/15 border-white/80 text-white' : 'bg-[#272b30] hover:bg-[#32373e] border-[#3e454e] text-[#d5dbe2]'} border text-[11px] font-mono truncate flex items-center justify-center gap-1">
+                            <label title="${stlList.length ? escapeHTML(stlList.map(f => f.name).join(', ')) : 'Adjuntar uno o varios .stl'}" class="flex-1 min-w-0 cursor-pointer px-2 py-1 rounded ${stlList.length ? 'bg-white/15 border-white/80 text-white' : 'bg-[#272b30] hover:bg-[#32373e] border-[#3e454e] text-[#d5dbe2]'} border text-[11px] font-mono truncate flex items-center justify-center gap-1">
                                 <i class="fa-solid fa-plus text-white shrink-0"></i>
-                                <span class="truncate">${stlAtt ? escapeHTML(stlAtt.name) : '.stl'}</span>
-                                <input type="file" accept=".stl" class="hidden" onchange="onDraftSlotFileSelected('${row.id}', 'stl', event)">
+                                <span class="truncate">${escapeHTML(formatSlotSummaryText(stlList, '.stl'))}</span>
+                                <input type="file" accept=".stl" multiple class="hidden" onchange="onDraftSlotFilesSelected('${row.id}', 'stl', event)">
                             </label>
-                            ${stlAtt ? `<button type="button" onclick="removeDraftSlotFile('${row.id}', 'stl')" title="Quitar .stl" class="px-1.5 py-1 rounded bg-[#272b30] hover:bg-red-950/70 border border-[#3e454e] text-red-400 text-[11px]"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                            ${stlList.length ? `<button type="button" onclick="removeDraftSlotFile('${row.id}', 'stl')" title="Quitar archivos .stl" class="px-1.5 py-1 rounded bg-[#272b30] hover:bg-red-950/70 border border-[#3e454e] text-red-400 text-[11px]"><i class="fa-solid fa-xmark"></i></button>` : ''}
                         </div>
 
                         <button type="button" onclick="removeDraftRow('${row.id}')" title="Quitar fila" class="px-2 py-1 rounded bg-[#272b30] hover:bg-red-950/60 text-[#9aa2ad] hover:text-red-400 text-xs shrink-0">
@@ -1498,49 +1671,62 @@
             container.appendChild(frag);
         }
 
-        async function onTableRowSlotFileSelected(partId, slot, event) {
-            const file = event.target.files && event.target.files[0];
-            if (!file) return;
-            const buf = await file.arrayBuffer();
+        async function onTableRowSlotFilesSelected(partId, slot, event) {
+            const files = Array.from(event.target.files || []);
+            if (files.length === 0) return;
+            const part = allParts.find(p => p.id === partId);
+            if (!part) return;
+
+            const currentList = getActiveSlotFiles(part, slot);
+            const newEntries = [];
+            for (const file of files) {
+                const buf = await file.arrayBuffer();
+                newEntries.push({
+                    name: file.name,
+                    size: buf.byteLength,
+                    data: buf,
+                    _isNewUpload: true
+                });
+            }
+
             if (!pendingRowFiles[partId]) pendingRowFiles[partId] = {};
-            pendingRowFiles[partId][slot] = { name: file.name, size: buf.byteLength, data: buf };
+            pendingRowFiles[partId][slot] = appendFilesToSlotList(currentList, newEntries);
 
             invalidatePartSlotBlobUrl(partId, slot);
-            const part = allParts.find(p => p.id === partId);
-            if (part) getOrCreatePartSlotBlobUrl(part, slot);
+            await buildOrRefreshSlotBlobUrl(part, slot);
             renderPartsTable();
             updatePendingChangesIndicator();
-            showToast(`Archivo .${slot} asignado (${file.name}). Pulsa Guardar para confirmar.`);
+            showToast(`${files.length} archivo(s) asignado(s). Pulsa Guardar para confirmar.`);
+            event.target.value = '';
         }
 
-        function removeTableRowSlotFile(partId, slot) {
+        function removeTableRowSlotFiles(partId, slot) {
             if (!isAdmin) return;
             const part = allParts.find(p => p.id === partId);
             if (!part) return;
 
-            const field = getSlotFieldKey(slot);
-            const hasSaved = Boolean(part[field] && (part[field].data || part[field].storagePath));
-            const pendingObj = pendingRowFiles[partId];
-            const hasPendingUpload = Boolean(pendingObj && pendingObj[slot] && pendingObj[slot].data);
-
-            if (hasPendingUpload && !hasSaved) {
-                delete pendingObj[slot];
-                if (!Object.prototype.hasOwnProperty.call(pendingObj, 'ipt') && !Object.prototype.hasOwnProperty.call(pendingObj, 'stl')) {
-                    delete pendingRowFiles[partId];
+            const savedList = normalizeFileArray(part[slot === 'stl' ? 'stlFiles' : 'iptFiles']);
+            if (savedList.length === 0) {
+                if (pendingRowFiles[partId]) {
+                    delete pendingRowFiles[partId][slot];
+                    if (!Object.prototype.hasOwnProperty.call(pendingRowFiles[partId], 'ipt') &&
+                        !Object.prototype.hasOwnProperty.call(pendingRowFiles[partId], 'stl')) {
+                        delete pendingRowFiles[partId];
+                    }
                 }
                 invalidatePartSlotBlobUrl(partId, slot);
                 renderPartsTable();
                 updatePendingChangesIndicator();
-                showToast(`Archivo .${slot} pendiente quitado.`);
+                showToast(`Archivos pendientes quitados.`);
                 return;
             }
 
             if (!pendingRowFiles[partId]) pendingRowFiles[partId] = {};
-            pendingRowFiles[partId][slot] = null;
+            pendingRowFiles[partId][slot] = [];
             invalidatePartSlotBlobUrl(partId, slot);
             renderPartsTable();
             updatePendingChangesIndicator();
-            showToast(`Archivo .${slot} marcado para eliminar. Pulsa Guardar para confirmar.`);
+            showToast(`Archivos marcados para eliminar. Pulsa Guardar para confirmar.`);
         }
 
         async function saveAllProgress() {
@@ -1602,7 +1788,7 @@
                     const categoria = (row.categoria || '').trim();
                     const observaciones = (row.observaciones || '').trim();
                     const slotChanges = pendingRowFiles[row.id] ? { ...pendingRowFiles[row.id] } : {};
-                    const hasFiles = Boolean(slotChanges.ipt || slotChanges.stl);
+                    const hasFiles = Boolean((slotChanges.ipt && slotChanges.ipt.length > 0) || (slotChanges.stl && slotChanges.stl.length > 0));
 
                     const hasAnyData = Boolean(codigo || descripcion || categoria || observaciones || hasFiles);
                     if (!hasAnyData) { remainingDrafts.push(row); continue; }
@@ -1622,8 +1808,8 @@
                         categoria: categoria || '',
                         observaciones,
                         date: new Date().toISOString().split('T')[0],
-                        iptFile: null,
-                        stlFile: null
+                        iptFiles: [],
+                        stlFiles: []
                     };
 
                     newDraftsToPersist.push({ newPart, slotChanges, draftId: row.id });
@@ -1697,7 +1883,7 @@
                 document.querySelectorAll('tr[data-part-id]').forEach(r => r.classList.remove('row-drop-active'));
                 if (row) {
                     row.classList.add('row-drop-active');
-                    targetLabel.textContent = `Soltar .IPT / .STL en fila: ${row.dataset.partCode || row.dataset.partId}`;
+                    targetLabel.textContent = `Soltar .IAM / .IPT / .STL en fila: ${row.dataset.partCode || row.dataset.partId}`;
                 } else {
                     targetLabel.textContent = 'Mueve el cursor sobre la fila o suelta aquí para agregar al listado';
                 }
@@ -1726,23 +1912,61 @@
                 if (droppedRow) {
                     const partId = droppedRow.dataset.partId;
                     const part = allParts.find(p => p.id === partId);
+                    if (!part) return;
                     if (!pendingRowFiles[partId]) pendingRowFiles[partId] = {};
 
-                    const assignedNames = [];
+                    const bySlot = { ipt: [], stl: [] };
                     for (const file of files) {
-                        const slot = getFileExtensionType(file.name);
+                        const slot = getFileExtensionSlot(file.name);
                         const buf = await file.arrayBuffer();
-                        pendingRowFiles[partId][slot] = { name: file.name, size: buf.byteLength, data: buf };
-                        invalidatePartSlotBlobUrl(partId, slot);
-                        if (part) getOrCreatePartSlotBlobUrl(part, slot);
-                        assignedNames.push(file.name);
+                        bySlot[slot].push({ name: file.name, size: buf.byteLength, data: buf, _isNewUpload: true });
                     }
+
+                    for (const slot of ['ipt', 'stl']) {
+                        if (bySlot[slot].length > 0) {
+                            const currentList = getActiveSlotFiles(part, slot);
+                            pendingRowFiles[partId][slot] = appendFilesToSlotList(currentList, bySlot[slot]);
+                            invalidatePartSlotBlobUrl(partId, slot);
+                            await buildOrRefreshSlotBlobUrl(part, slot);
+                        }
+                    }
+
                     renderPartsTable();
                     updatePendingChangesIndicator();
-                    showToast(`Asignado(s): ${assignedNames.join(', ')}. Pulsa Guardar para confirmar.`);
+                    showToast(`Asignado(s) ${files.length} archivo(s). Pulsa Guardar para confirmar.`);
                 } else {
                     syncDraftInputsFromDOM();
                     const knownCodes = getKnownCodeKeys();
+                    const iamFile = files.find(f => isIamFileName(f.name));
+
+                    // Si sueltan un .iam junto con varios .ipt/.stl, se agrupan todos en un mismo ítem ensamble
+                    if (iamFile && files.length > 1) {
+                        const candidateCode = iamFile.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
+                        const key = normalizeCodeKey(candidateCode);
+                        if (key && knownCodes.has(key)) {
+                            showToast(`El código "${candidateCode}" ya existe.`);
+                            return;
+                        }
+                        const rowId = 'draft-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+                        draftRows.push({
+                            id: rowId,
+                            codigo: candidateCode,
+                            descripcion: iamFile.name.replace(/\.[^/.]+$/, ''),
+                            categoria: '',
+                            observaciones: ''
+                        });
+                        pendingRowFiles[rowId] = { ipt: [], stl: [] };
+                        for (const file of files) {
+                            const slot = getFileExtensionSlot(file.name);
+                            const buf = await file.arrayBuffer();
+                            pendingRowFiles[rowId][slot].push({ name: file.name, size: buf.byteLength, data: buf, _isNewUpload: true });
+                        }
+                        renderDraftRows();
+                        updatePendingChangesIndicator();
+                        showToast(`Ensamble "${candidateCode}" creado con ${files.length} archivo(s). Pulsa Guardar.`);
+                        return;
+                    }
+
                     const draftByCodeKey = new Map();
                     for (const r of draftRows) {
                         const k = normalizeCodeKey(r.codigo);
@@ -1752,15 +1976,16 @@
                     let addedRows = 0, attachedToExistingDraft = 0, skipped = 0;
 
                     for (const file of files) {
-                        const slot = getFileExtensionType(file.name);
+                        const slot = getFileExtensionSlot(file.name);
                         const candidateCode = file.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
                         const key = normalizeCodeKey(candidateCode);
                         const buf = await file.arrayBuffer();
+                        const entry = { name: file.name, size: buf.byteLength, data: buf, _isNewUpload: true };
 
                         if (key && draftByCodeKey.has(key)) {
                             const existingDraft = draftByCodeKey.get(key);
                             if (!pendingRowFiles[existingDraft.id]) pendingRowFiles[existingDraft.id] = {};
-                            pendingRowFiles[existingDraft.id][slot] = { name: file.name, size: buf.byteLength, data: buf };
+                            pendingRowFiles[existingDraft.id][slot] = appendFilesToSlotList(pendingRowFiles[existingDraft.id][slot] || [], [entry]);
                             attachedToExistingDraft++;
                             continue;
                         }
@@ -1778,9 +2003,7 @@
                         };
                         draftRows.push(newDraft);
                         if (key) draftByCodeKey.set(key, newDraft);
-                        pendingRowFiles[rowId] = {
-                            [slot]: { name: file.name, size: buf.byteLength, data: buf }
-                        };
+                        pendingRowFiles[rowId] = { [slot]: [entry] };
                         addedRows++;
                     }
                     renderDraftRows();
@@ -1793,38 +2016,33 @@
         }
 
         function buildSlotControlHTML(part, slot) {
-            const hasFile = partHasSlotFile(part, slot);
-            const activeMeta = getActiveSlotMeta(part, slot);
+            const info = getSlotDisplayInfo(part, slot);
             const isStl = slot === 'stl';
-            const badgeText = isStl ? '.stl' : '.ipt';
-            const fileName = activeMeta && activeMeta.name ? activeMeta.name : `${part.codigo || 'pieza'}${badgeText}`;
             const isSelected = selectedPartId === part.id;
 
             const pendingObj = pendingRowFiles[part.id];
-            const isPendingDelete = Boolean(pendingObj && Object.prototype.hasOwnProperty.call(pendingObj, slot) && pendingObj[slot] === null);
-            const isPendingUpload = Boolean(pendingObj && pendingObj[slot] && pendingObj[slot].data);
+            const isPendingDelete = Boolean(pendingObj && Object.prototype.hasOwnProperty.call(pendingObj, slot) && Array.isArray(pendingObj[slot]) && pendingObj[slot].length === 0);
+            const isPendingUpload = Boolean(pendingObj && Array.isArray(pendingObj[slot]) && pendingObj[slot].some(f => f._isNewUpload));
 
-            if (!hasFile) {
-                if (isAdmin) {
-                    const addBorderColor = isPendingDelete
-                        ? 'border-red-500/60 text-red-300 bg-red-950/30'
-                        : isStl
-                            ? 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-[#cfd5de]'
-                            : 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-[#69c3fa]';
-                    return `
-                        <label onclick="event.stopPropagation()" title="${isPendingDelete ? `Marcado para eliminar (.${slot}). Clic para cargar otro` : `Cargar archivo .${slot}`}" class="cursor-pointer inline-flex items-center justify-center gap-1 px-2 py-1 rounded ${addBorderColor} border font-mono text-[11px] transition">
-                            <i class="fa-solid fa-plus text-[10px] text-amber-400"></i>
-                            <span>${badgeText}</span>
-                            <input type="file" accept="${badgeText}" class="hidden" onchange="onTableRowSlotFileSelected('${part.id}', '${slot}', event)">
-                        </label>
-                    `;
-                }
+            // Si NO tiene archivos en este slot:
+            if (!info) {
+                // En modo lectura NO mostramos nada
+                if (!isAdmin) return '';
+
+                const acceptAttr = isStl ? '.stl' : '.ipt,.iam';
+                const btnLabel = isStl ? '.stl' : '.iam/.ipt';
+                const addBorderColor = isPendingDelete
+                    ? 'border-red-500/60 text-red-300 bg-red-950/30'
+                    : isStl
+                        ? 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-[#cfd5de]'
+                        : 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-[#69c3fa]';
 
                 return `
-                    <span class="inline-flex items-center justify-center gap-1 px-2 py-1 rounded bg-[#1e2227] text-[#6d7682] border border-[#353b42] font-mono text-[11px] opacity-40 select-none">
-                        <i class="fa-solid fa-cube text-[10px]"></i>
-                        <span>${badgeText}</span>
-                    </span>
+                    <label onclick="event.stopPropagation()" title="${isPendingDelete ? 'Marcado para eliminar. Clic para cargar otro' : `Cargar archivo(s) ${btnLabel}`}" class="cursor-pointer inline-flex items-center justify-center gap-1 px-2 py-1 rounded ${addBorderColor} border font-mono text-[11px] transition">
+                        <i class="fa-solid fa-plus text-[10px] text-amber-400"></i>
+                        <span>${btnLabel}</span>
+                        <input type="file" accept="${acceptAttr}" multiple class="hidden" onchange="onTableRowSlotFilesSelected('${part.id}', '${slot}', event)">
+                    </label>
                 `;
             }
 
@@ -1843,29 +2061,38 @@
             }
 
             const pendingRing = isPendingUpload ? 'ring-1 ring-amber-400/80' : '';
+            const namesTooltip = info.files.map(f => f.name).join('\n');
+            const actionHint = info.files.length > 1
+                ? `Arrastrar o descargar paquete (${info.downloadName}):\n${namesTooltip}`
+                : `Arrastrar o descargar: ${info.downloadName}`;
 
             const pillHTML = `
                 <div
                     draggable="true"
                     ondragstart="handleSlotDragStart(event, '${part.id}', '${slot}')"
                     onclick="event.stopPropagation(); downloadPartSlotFile('${part.id}', '${slot}')"
-                    title="Arrastrar o descargar: ${escapeHTML(fileName)}"
+                    title="${escapeHTML(actionHint)}"
                     class="draggable-ipt-pill inline-flex items-center justify-center gap-1 px-2 py-1 rounded ${pillClasses} ${pendingRing} border font-mono text-xs font-semibold transition"
                 >
-                    <i class="fa-solid fa-cube ${iconClasses} text-[11px] transition-colors"></i>
-                    <span>${badgeText}</span>
+                    <i class="fa-solid ${info.files.length > 1 ? 'fa-cubes' : 'fa-cube'} ${iconClasses} text-[11px] transition-colors"></i>
+                    <span>${escapeHTML(info.label)}</span>
                 </div>
             `;
 
             if (!isAdmin) return pillHTML;
 
+            const acceptAttr = isStl ? '.stl' : '.ipt,.iam';
             return `
                 <div class="inline-flex items-center gap-0.5">
                     ${pillHTML}
+                    <label onclick="event.stopPropagation()" title="Agregar más archivos (${acceptAttr})" class="cursor-pointer px-1.5 py-1 rounded bg-[#1e2227] hover:bg-[#32373e] border border-[#3e454e] text-amber-400 text-[10px] transition">
+                        <i class="fa-solid fa-plus"></i>
+                        <input type="file" accept="${acceptAttr}" multiple class="hidden" onchange="onTableRowSlotFilesSelected('${part.id}', '${slot}', event)">
+                    </label>
                     <button
                         type="button"
-                        onclick="event.stopPropagation(); removeTableRowSlotFile('${part.id}', '${slot}')"
-                        title="Eliminar archivo ${badgeText} (${escapeHTML(fileName)})"
+                        onclick="event.stopPropagation(); removeTableRowSlotFiles('${part.id}', '${slot}')"
+                        title="Eliminar archivo(s) de este grupo"
                         class="px-1.5 py-1 rounded bg-[#1e2227] hover:bg-red-950/70 border border-[#3e454e] hover:border-red-500/60 text-[#9aa2ad] hover:text-red-400 text-[10px] transition"
                     >
                         <i class="fa-solid fa-xmark"></i>
@@ -1875,27 +2102,14 @@
         }
 
         function buildStlViewButtonHTML(part) {
-            const hasStl = partHasSlotFile(part, 'stl');
-            if (!hasStl) {
-                return `
-                    <button
-                        type="button"
-                        disabled
-                        aria-disabled="true"
-                        title="Disponible cuando el ítem tenga un archivo .stl"
-                        class="inline-flex items-center justify-center gap-1 px-2 py-1 rounded bg-[#1b1f24] border border-[#2f353d] text-[#606873] font-mono text-[11px] opacity-40 cursor-not-allowed select-none"
-                    >
-                        <i class="fa-solid fa-eye text-[10px]"></i>
-                        <span>Ver</span>
-                    </button>
-                `;
-            }
+            // Solo mostrar el botón Ver si el ítem tiene archivo(s) .stl
+            if (!partHasSlotFile(part, 'stl')) return '';
 
             return `
                 <button
                     type="button"
                     onclick="event.stopPropagation(); window.openStlViewerModal('${part.id}')"
-                    title="Abrir visor 3D del archivo .stl"
+                    title="Abrir visor 3D del modelo .stl"
                     class="inline-flex items-center justify-center gap-1 px-2 py-1 rounded bg-[#1da1f2]/20 hover:bg-[#1da1f2]/35 border border-[#1da1f2]/75 hover:border-[#1da1f2] text-[#7cccfb] hover:text-white font-mono text-[11px] font-semibold transition cursor-pointer"
                 >
                     <i class="fa-solid fa-eye text-[10px]"></i>
@@ -1905,13 +2119,22 @@
         }
 
         function buildFilesCellHTML(part) {
+            const cadHTML = buildSlotControlHTML(part, 'ipt');
+            const stlHTML = buildSlotControlHTML(part, 'stl');
+            const viewHTML = buildStlViewButtonHTML(part);
+
+            if (!cadHTML && !stlHTML && !viewHTML) {
+                return '';
+            }
+
+            const stlGroupHTML = (stlHTML || viewHTML)
+                ? `<div class="inline-flex items-center gap-1">${stlHTML}${viewHTML}</div>`
+                : '';
+
             return `
                 <div class="inline-flex items-center justify-center gap-2">
-                    ${buildSlotControlHTML(part, 'ipt')}
-                    <div class="inline-flex items-center gap-1">
-                        ${buildSlotControlHTML(part, 'stl')}
-                        ${buildStlViewButtonHTML(part)}
-                    </div>
+                    ${cadHTML}
+                    ${stlGroupHTML}
                 </div>
             `;
         }
@@ -1928,8 +2151,8 @@
             return allParts.filter(part => {
                 const hay = part._searchNorm || normalizeText([
                     part.codigo, part.descripcion, part.categoria, part.observaciones,
-                    part.iptFile ? part.iptFile.name : '',
-                    part.stlFile ? part.stlFile.name : ''
+                    ...normalizeFileArray(part.iptFiles).map(f => f.name),
+                    ...normalizeFileArray(part.stlFiles).map(f => f.name)
                 ].join(' '));
                 for (let i = 0; i < terms.length; i++) {
                     if (!hay.includes(terms[i])) return false;
@@ -2088,12 +2311,18 @@
             if (!isAdmin) return;
             const parts = allParts.map(p => {
                 const { _searchNorm, ...clean } = p;
-                if (clean.iptFile && clean.iptFile.data) {
-                    clean.iptFile = { name: clean.iptFile.name, size: clean.iptFile.size, type: clean.iptFile.type, base64Data: arrayBufferToBase64(clean.iptFile.data) };
-                }
-                if (clean.stlFile && clean.stlFile.data) {
-                    clean.stlFile = { name: clean.stlFile.name, size: clean.stlFile.size, type: clean.stlFile.type, base64Data: arrayBufferToBase64(clean.stlFile.data) };
-                }
+                clean.iptFiles = normalizeFileArray(clean.iptFiles).map(f => ({
+                    name: f.name,
+                    size: f.size,
+                    type: f.type,
+                    base64Data: f.data ? arrayBufferToBase64(f.data) : null
+                }));
+                clean.stlFiles = normalizeFileArray(clean.stlFiles).map(f => ({
+                    name: f.name,
+                    size: f.size,
+                    type: f.type,
+                    base64Data: f.data ? arrayBufferToBase64(f.data) : null
+                }));
                 return clean;
             });
             const blob = new Blob([JSON.stringify({ parts }, null, 2)], { type: 'application/json' });
@@ -2112,22 +2341,27 @@
                 if (k) existingKeys.add(k);
 
                 const slotChanges = {};
-                if (item.iptFile && item.iptFile.base64Data) {
-                    slotChanges.ipt = {
-                        name: item.iptFile.name,
-                        size: item.iptFile.size,
-                        data: base64ToArrayBuffer(item.iptFile.base64Data)
-                    };
-                    item.iptFile = null;
+                const rawIpts = normalizeFileArray(item.iptFiles || item.iptFile);
+                const rawStls = normalizeFileArray(item.stlFiles || item.stlFile);
+
+                if (rawIpts.some(f => f.base64Data)) {
+                    slotChanges.ipt = rawIpts.filter(f => f.base64Data).map(f => ({
+                        name: f.name,
+                        size: f.size,
+                        data: base64ToArrayBuffer(f.base64Data),
+                        _isNewUpload: true
+                    }));
                 }
-                if (item.stlFile && item.stlFile.base64Data) {
-                    slotChanges.stl = {
-                        name: item.stlFile.name,
-                        size: item.stlFile.size,
-                        data: base64ToArrayBuffer(item.stlFile.base64Data)
-                    };
-                    item.stlFile = null;
+                if (rawStls.some(f => f.base64Data)) {
+                    slotChanges.stl = rawStls.filter(f => f.base64Data).map(f => ({
+                        name: f.name,
+                        size: f.size,
+                        data: base64ToArrayBuffer(f.base64Data),
+                        _isNewUpload: true
+                    }));
                 }
+                item.iptFiles = [];
+                item.stlFiles = [];
                 await persistPartRecord(item, slotChanges);
             }
             allParts = await fetchAllParts(true);
@@ -2173,6 +2407,14 @@
             for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
             return b.buffer;
         }
+
+        // Exponer funciones y referencias globales para el módulo Three.js
+        window.getAllPartsRef = () => allParts;
+        window.selectPartRow = selectPartRow;
+        window.partHasSlotFile = partHasSlotFile;
+        window.getActiveSlotFiles = getActiveSlotFiles;
+        window.ensurePartSlotBuffers = ensurePartSlotBuffers;
+        window.showToast = showToast;
 
         window.addEventListener('DOMContentLoaded', async () => {
             await initIndexedDB();
