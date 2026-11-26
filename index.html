@@ -246,7 +246,7 @@
         <section class="dw-card overflow-hidden">
             <div class="dw-card-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">COMPONENTES CAD (.IAM / .IPT / .STL) • AGRUPADOS POR CATEGORÍA</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">COMPONENTES CAD (.IAM / .IPT / .STL / IMÁGENES) • AGRUPADOS POR CATEGORÍA</span>
                     <span id="pending-changes-badge" class="hidden px-2 py-0.5 rounded bg-[#1da1f2]/20 border border-[#1da1f2]/50 text-[#69c3fa] font-mono text-[10px]">
                         0 cambio(s) pendiente(s)
                     </span>
@@ -256,7 +256,7 @@
                         Expandir / Colapsar todo
                     </button>
                     <p class="hidden sm:block text-[11px] text-[#9aa2ad]">
-                        Clic en fila para resaltar • Arrastra <code class="text-[#1da1f2]">.iam/.ipt</code> o <code class="text-white">.stl</code> a tu carpeta
+                        Clic en fila para resaltar • Arrastra <code class="text-[#1da1f2]">.iam/.ipt</code> o <code class="text-white">.stl</code> • Clic en foto para ampliar
                     </p>
                 </div>
             </div>
@@ -269,7 +269,7 @@
                             <th class="py-2.5 px-3">Descripción</th>
                             <th class="py-2.5 px-3">Categoría</th>
                             <th class="py-2.5 px-3">Observaciones</th>
-                            <th class="py-2.5 px-3 text-center">Archivos (.IAM / .IPT / .STL)</th>
+                            <th class="py-2.5 px-3 text-center">Archivos / Imágenes</th>
                             <th id="admin-actions-th" class="hidden py-2.5 px-3 text-right">Admin</th>
                         </tr>
                     </thead>
@@ -290,7 +290,7 @@
                 <span id="footer-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
                 <span id="footer-status-text">Base de Datos: <strong>Conectando...</strong></span>
             </div>
-            <div>Agrupado por categoría • Sin duplicados por código • Soporta múltiples archivos y ensambles (.iam + .ipt / .stl)</div>
+            <div>Agrupado por categoría • Sin duplicados por código • Soporta .iam, .ipt, .stl e imágenes</div>
         </div>
     </footer>
 
@@ -340,6 +340,55 @@
                     <span class="bg-[#1b1f24]/85 border border-[#2f353e] px-2 py-0.5 rounded">Clic izq: Rotar • Rueda: Zoom • Clic der: Mover</span>
                     <span id="stl-viewer-dims" class="bg-[#1b1f24]/85 border border-[#2f353e] px-2 py-0.5 rounded text-[#cfd5de]"></span>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Visor de Imágenes -->
+    <div id="image-viewer-modal" onclick="if(event.target===this) closeImageViewerModal()" class="fixed inset-0 z-50 hidden bg-black/85 flex items-center justify-center p-3 sm:p-6">
+        <div class="bg-[#23272c] border border-[#3a4048] rounded shadow-2xl w-full max-w-4xl flex flex-col overflow-hidden max-h-[92vh]">
+            <div class="bg-[#1b1f24] border-b border-[#343a42] px-4 py-2.5 flex items-center justify-between gap-2">
+                <div class="min-w-0 flex items-center gap-2">
+                    <i class="fa-solid fa-image text-emerald-400 text-xs"></i>
+                    <h3 id="image-viewer-title" class="text-xs sm:text-sm font-semibold text-white truncate">Imagen</h3>
+                    <span id="image-viewer-counter" class="font-mono text-[11px] text-[#9aa2ad] shrink-0"></span>
+                </div>
+                <button type="button" onclick="closeImageViewerModal()" class="px-2.5 py-1 rounded bg-[#2b3038] hover:bg-red-950/70 border border-[#404752] hover:border-red-500/60 text-xs text-[#d5dbe2] hover:text-red-300 transition flex items-center gap-1">
+                    <i class="fa-solid fa-xmark"></i>
+                    <span>Cerrar</span>
+                </button>
+            </div>
+            <div class="relative bg-[#14171b] flex-1 min-h-[320px] sm:min-h-[460px] flex items-center justify-center p-4 select-none overflow-hidden">
+                <button type="button" id="image-viewer-prev" onclick="navigateImageViewer(-1)" title="Anterior" class="hidden absolute left-3 z-10 w-9 h-9 rounded bg-[#23272c]/90 hover:bg-[#1da1f2] border border-[#3a4048] text-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                </button>
+                <img id="image-viewer-img" src="" alt="Vista previa" class="max-w-full max-h-[72vh] object-contain rounded shadow-lg">
+                <button type="button" id="image-viewer-next" onclick="navigateImageViewer(1)" title="Siguiente" class="hidden absolute right-3 z-10 w-9 h-9 rounded bg-[#23272c]/90 hover:bg-[#1da1f2] border border-[#3a4048] text-white flex items-center justify-center transition">
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                </button>
+            </div>
+            <div id="image-viewer-thumbs" class="bg-[#1b1f24] border-t border-[#343a42] px-4 py-2 flex items-center justify-center gap-2 overflow-x-auto"></div>
+        </div>
+    </div>
+
+    <!-- Modal Conflicto de Archivos Existentes (Agregar / Reemplazar / Cancelar) -->
+    <div id="file-conflict-modal" class="fixed inset-0 z-50 hidden bg-black/75 flex items-center justify-center p-4">
+        <div class="bg-[#272b30] border border-[#3a4048] rounded shadow-2xl w-full max-w-md p-5 text-center">
+            <div class="w-9 h-9 rounded bg-amber-500/15 border border-amber-400/50 text-amber-300 flex items-center justify-center mx-auto mb-2.5 text-sm">
+                <i class="fa-solid fa-folder-open"></i>
+            </div>
+            <h4 class="text-sm font-bold text-white">Ya existen archivos cargados</h4>
+            <p id="file-conflict-message" class="text-xs text-[#aeb6c2] mt-1.5"></p>
+            <div class="flex flex-wrap gap-2 mt-5">
+                <button type="button" id="conflict-add-btn" class="flex-1 py-2 px-3 rounded bg-[#1da1f2] hover:bg-[#1488d1] text-xs font-semibold text-white transition">
+                    Agregar
+                </button>
+                <button type="button" id="conflict-replace-btn" class="flex-1 py-2 px-3 rounded bg-amber-600 hover:bg-amber-500 text-xs font-semibold text-white transition">
+                    Reemplazar
+                </button>
+                <button type="button" id="conflict-cancel-btn" class="flex-1 py-2 px-3 rounded bg-[#32373e] hover:bg-[#3c424b] text-xs font-medium text-[#d5dbe2] transition">
+                    Cancelar
+                </button>
             </div>
         </div>
     </div>
@@ -644,9 +693,23 @@
 
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                const modal = document.getElementById('stl-viewer-modal');
-                if (modal && !modal.classList.contains('hidden')) {
+                const stlModal = document.getElementById('stl-viewer-modal');
+                if (stlModal && !stlModal.classList.contains('hidden')) {
                     window.closeStlViewerModal();
+                }
+                const imgModal = document.getElementById('image-viewer-modal');
+                if (imgModal && !imgModal.classList.contains('hidden') && typeof window.closeImageViewerModal === 'function') {
+                    window.closeImageViewerModal();
+                }
+            } else if (e.key === 'ArrowLeft') {
+                const imgModal = document.getElementById('image-viewer-modal');
+                if (imgModal && !imgModal.classList.contains('hidden') && typeof window.navigateImageViewer === 'function') {
+                    window.navigateImageViewer(-1);
+                }
+            } else if (e.key === 'ArrowRight') {
+                const imgModal = document.getElementById('image-viewer-modal');
+                if (imgModal && !imgModal.classList.contains('hidden') && typeof window.navigateImageViewer === 'function') {
+                    window.navigateImageViewer(1);
                 }
             }
         });
@@ -656,12 +719,14 @@
         const DEFAULT_SUPABASE_URL = 'https://sksanvauywgjxmxujicl.supabase.co';
         const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_2fuRdNLrO24nN5HA6e8lmw_v6IYVleX';
 
-        const DB_NAME = 'DataWaves_CAD_IPT_STL_DB_V17';
+        const DB_NAME = 'DataWaves_CAD_IPT_STL_DB_V18';
         const DB_VERSION = 1;
         const STORE_NAME = 'parts';
         const ADMIN_SECRET = 'datawaves';
         const SB_TABLE = 'cad_parts';
         const SB_BUCKET = 'cad-models';
+
+        const ACCEPTED_UPLOAD_EXTENSIONS = '.ipt,.iam,.stl,.png,.jpg,.jpeg,.webp,.gif,.bmp';
 
         let supabaseClient = null;
         let isSupabaseConnected = false;
@@ -678,7 +743,15 @@
         let savedPopupTimer = null;
         let filterDebounceTimer = null;
 
+        let imageViewerState = {
+            partId: null,
+            urls: [],
+            names: [],
+            index: 0
+        };
+
         const blobUrlCache = new Map();
+        const imageObjectUrlCache = new Map();
         const inFlightDownloads = new Map();
 
         function partHasObservations(part) {
@@ -708,9 +781,23 @@
             renderPartsTable();
         }
 
+        function isImageFileName(fileName) {
+            return /\.(png|jpe?g|webp|gif|bmp)$/i.test(String(fileName || '').trim());
+        }
+
+        function getImageMimeType(fileName) {
+            const lower = String(fileName || '').trim().toLowerCase();
+            if (lower.endsWith('.png')) return 'image/png';
+            if (lower.endsWith('.webp')) return 'image/webp';
+            if (lower.endsWith('.gif')) return 'image/gif';
+            if (lower.endsWith('.bmp')) return 'image/bmp';
+            return 'image/jpeg';
+        }
+
         function getFileExtensionSlot(fileName) {
             const lower = String(fileName || '').trim().toLowerCase();
             if (lower.endsWith('.stl')) return 'stl';
+            if (isImageFileName(lower)) return 'img';
             return 'ipt';
         }
 
@@ -733,7 +820,7 @@
             return [];
         }
 
-        function serializeFilesMetadata(iptFiles, stlFiles) {
+        function serializeFilesMetadata(iptFiles, stlFiles, imgFiles = []) {
             const iptMeta = (iptFiles || []).filter(f => f && f.storagePath).map(f => ({
                 name: f.name || '',
                 size: f.size || 0,
@@ -744,11 +831,17 @@
                 size: f.size || 0,
                 path: f.storagePath
             }));
-            if (iptMeta.length === 0 && stlMeta.length === 0) return 'ipt_service';
+            const imgMeta = (imgFiles || []).filter(f => f && f.storagePath).map(f => ({
+                name: f.name || '',
+                size: f.size || 0,
+                path: f.storagePath
+            }));
+            if (iptMeta.length === 0 && stlMeta.length === 0 && imgMeta.length === 0) return 'ipt_service';
             return JSON.stringify({
-                v: 3,
+                v: 4,
                 iptList: iptMeta,
                 stlList: stlMeta,
+                imgList: imgMeta,
                 stl: stlMeta[0] || null
             });
         }
@@ -756,16 +849,18 @@
         function parseFilesFromRow(row, localMatch) {
             const localIptMap = new Map(normalizeFileArray(localMatch && (localMatch.iptFiles || localMatch.iptFile)).map(f => [f.storagePath || f.name, f]));
             const localStlMap = new Map(normalizeFileArray(localMatch && (localMatch.stlFiles || localMatch.stlFile)).map(f => [f.storagePath || f.name, f]));
+            const localImgMap = new Map(normalizeFileArray(localMatch && localMatch.imgFiles).map(f => [f.storagePath || f.name, f]));
 
             let iptFiles = [];
             let stlFiles = [];
-            let parsedV3 = false;
+            let imgFiles = [];
+            let parsedV3Plus = false;
 
             if (row.preset_shape && typeof row.preset_shape === 'string' && row.preset_shape.startsWith('{')) {
                 try {
                     const parsed = JSON.parse(row.preset_shape);
                     if (parsed && parsed.v >= 3) {
-                        parsedV3 = true;
+                        parsedV3Plus = true;
                         iptFiles = (parsed.iptList || []).filter(x => x && x.path).map(x => {
                             const lm = localIptMap.get(x.path) || localIptMap.get(x.name);
                             return {
@@ -786,6 +881,16 @@
                                 data: lm ? lm.data : null
                             };
                         });
+                        imgFiles = (parsed.imgList || []).filter(x => x && x.path).map(x => {
+                            const lm = localImgMap.get(x.path) || localImgMap.get(x.name);
+                            return {
+                                name: x.name || `${row.codigo || 'pieza'}.jpg`,
+                                size: x.size || 0,
+                                type: getImageMimeType(x.name),
+                                storagePath: x.path,
+                                data: lm ? lm.data : null
+                            };
+                        });
                     } else if (parsed && parsed.stl && parsed.stl.path) {
                         const lm = localStlMap.get(parsed.stl.path) || localStlMap.get(parsed.stl.name);
                         stlFiles = [{
@@ -799,7 +904,7 @@
                 } catch (_) {}
             }
 
-            if (!parsedV3 && iptFiles.length === 0 && row.ipt_path) {
+            if (!parsedV3Plus && iptFiles.length === 0 && row.ipt_path) {
                 const lm = localIptMap.get(row.ipt_path) || localIptMap.get(row.ipt_name);
                 iptFiles = [{
                     name: row.ipt_name || `${row.codigo || 'pieza'}.ipt`,
@@ -810,7 +915,13 @@
                 }];
             }
 
-            return { iptFiles, stlFiles };
+            return { iptFiles, stlFiles, imgFiles };
+        }
+
+        function getSlotFieldName(slot) {
+            if (slot === 'stl') return 'stlFiles';
+            if (slot === 'img') return 'imgFiles';
+            return 'iptFiles';
         }
 
         function getActiveSlotFiles(part, slot) {
@@ -819,8 +930,16 @@
             if (pendingObj && Object.prototype.hasOwnProperty.call(pendingObj, slot)) {
                 return Array.isArray(pendingObj[slot]) ? pendingObj[slot] : [];
             }
-            const field = slot === 'stl' ? 'stlFiles' : 'iptFiles';
-            return normalizeFileArray(part[field] || part[slot === 'stl' ? 'stlFile' : 'iptFile']);
+            const field = getSlotFieldName(slot);
+            return normalizeFileArray(part[field] || (slot === 'stl' ? part.stlFile : slot === 'ipt' ? part.iptFile : null));
+        }
+
+        function getPartTotalActiveFilesCount(part) {
+            return (
+                getActiveSlotFiles(part, 'ipt').length +
+                getActiveSlotFiles(part, 'stl').length +
+                getActiveSlotFiles(part, 'img').length
+            );
         }
 
         function partHasSlotFile(part, slot) {
@@ -831,6 +950,16 @@
         function getSlotDisplayInfo(part, slot) {
             const files = getActiveSlotFiles(part, slot);
             if (files.length === 0) return null;
+
+            if (slot === 'img') {
+                return {
+                    label: files.length > 1 ? `Fotos (${files.length})` : 'Foto',
+                    downloadName: files[0].name || `${part.codigo || 'imagen'}.jpg`,
+                    count: files.length,
+                    hasIam: false,
+                    files
+                };
+            }
 
             if (slot === 'stl') {
                 const label = files.length > 1 ? `.stl (${files.length})` : '.stl';
@@ -866,6 +995,23 @@
             if (!storagePath || !supabaseClient) return null;
             const { data } = supabaseClient.storage.from(SB_BUCKET).getPublicUrl(storagePath);
             return data && data.publicUrl ? data.publicUrl : null;
+        }
+
+        function getImagePreviewUrl(fileEntry) {
+            if (!fileEntry) return '';
+            if (fileEntry.data) {
+                let cached = imageObjectUrlCache.get(fileEntry);
+                if (!cached) {
+                    const blob = new Blob([fileEntry.data], { type: fileEntry.type || getImageMimeType(fileEntry.name) });
+                    cached = URL.createObjectURL(blob);
+                    imageObjectUrlCache.set(fileEntry, cached);
+                }
+                return cached;
+            }
+            if (fileEntry.storagePath) {
+                return getPublicStorageUrl(fileEntry.storagePath) || '';
+            }
+            return '';
         }
 
         async function ensureSingleFileBuffer(part, slot, fileEntry) {
@@ -904,7 +1050,7 @@
             if (files.length === 0) return [];
             const loaded = await Promise.all(files.map(f => ensureSingleFileBuffer(part, slot, f)));
             const valid = loaded.filter(f => f && f.data);
-            if (valid.length === files.length) {
+            if (valid.length === files.length && slot !== 'img') {
                 await buildOrRefreshSlotBlobUrl(part, slot);
             }
             return valid;
@@ -915,6 +1061,7 @@
         }
 
         async function buildOrRefreshSlotBlobUrl(part, slot) {
+            if (slot === 'img') return null;
             const info = getSlotDisplayInfo(part, slot);
             if (!info || info.files.length === 0) return null;
 
@@ -1045,6 +1192,126 @@
             document.body.removeChild(a);
         }
 
+        async function openImageViewerModal(partId, startIndex = 0) {
+            selectPartRow(partId);
+            const part = allParts.find(p => p.id === partId);
+            if (!part) return;
+            const imgFiles = getActiveSlotFiles(part, 'img');
+            if (imgFiles.length === 0) return;
+
+            const urls = [];
+            const names = [];
+            for (const f of imgFiles) {
+                let url = getImagePreviewUrl(f);
+                if (!url && f.storagePath) {
+                    const loaded = await ensureSingleFileBuffer(part, 'img', f);
+                    if (loaded) url = getImagePreviewUrl(loaded);
+                }
+                if (url) {
+                    urls.push(url);
+                    names.push(f.name || 'Imagen');
+                }
+            }
+
+            if (urls.length === 0) {
+                showToast('No se pudieron cargar las imágenes.');
+                return;
+            }
+
+            imageViewerState = {
+                partId,
+                urls,
+                names,
+                index: Math.max(0, Math.min(startIndex, urls.length - 1))
+            };
+
+            const titleEl = document.getElementById('image-viewer-title');
+            if (titleEl) {
+                titleEl.textContent = part.codigo
+                    ? `${part.codigo}${part.descripcion ? ' — ' + part.descripcion : ''}`
+                    : 'Imágenes';
+            }
+
+            renderImageViewerContent();
+            document.getElementById('image-viewer-modal').classList.remove('hidden');
+        }
+
+        function renderImageViewerContent() {
+            const { urls, names, index } = imageViewerState;
+            if (!urls || urls.length === 0) return;
+
+            const imgEl = document.getElementById('image-viewer-img');
+            const counterEl = document.getElementById('image-viewer-counter');
+            const prevBtn = document.getElementById('image-viewer-prev');
+            const nextBtn = document.getElementById('image-viewer-next');
+            const thumbsEl = document.getElementById('image-viewer-thumbs');
+
+            imgEl.src = urls[index];
+            imgEl.alt = names[index] || 'Imagen';
+            counterEl.textContent = `${names[index] || ''} (${index + 1}/${urls.length})`;
+
+            const hasMultiple = urls.length > 1;
+            prevBtn.classList.toggle('hidden', !hasMultiple);
+            nextBtn.classList.toggle('hidden', !hasMultiple);
+
+            if (hasMultiple) {
+                thumbsEl.classList.remove('hidden');
+                thumbsEl.innerHTML = urls.map((u, idx) => `
+                    <button type="button" onclick="selectImageViewerIndex(${idx})" class="w-12 h-12 rounded overflow-hidden border-2 ${idx === index ? 'border-[#1da1f2]' : 'border-[#3a4048] opacity-65 hover:opacity-100'} transition shrink-0">
+                        <img src="${u}" alt="${escapeHTML(names[idx] || '')}" class="w-full h-full object-cover">
+                    </button>
+                `).join('');
+            } else {
+                thumbsEl.classList.add('hidden');
+                thumbsEl.innerHTML = '';
+            }
+        }
+
+        function selectImageViewerIndex(idx) {
+            if (!imageViewerState.urls || idx < 0 || idx >= imageViewerState.urls.length) return;
+            imageViewerState.index = idx;
+            renderImageViewerContent();
+        }
+
+        function navigateImageViewer(delta) {
+            const len = imageViewerState.urls ? imageViewerState.urls.length : 0;
+            if (len <= 1) return;
+            imageViewerState.index = (imageViewerState.index + delta + len) % len;
+            renderImageViewerContent();
+        }
+
+        function closeImageViewerModal() {
+            const modal = document.getElementById('image-viewer-modal');
+            if (modal) modal.classList.add('hidden');
+            const imgEl = document.getElementById('image-viewer-img');
+            if (imgEl) imgEl.src = '';
+        }
+
+        function askFileConflictResolution(targetLabel, newCount) {
+            return new Promise(resolve => {
+                const modal = document.getElementById('file-conflict-modal');
+                const msgEl = document.getElementById('file-conflict-message');
+                const addBtn = document.getElementById('conflict-add-btn');
+                const replaceBtn = document.getElementById('conflict-replace-btn');
+                const cancelBtn = document.getElementById('conflict-cancel-btn');
+
+                msgEl.textContent = `El ítem "${targetLabel}" ya tiene archivos cargados. ¿Qué deseas hacer con los ${newCount} archivo(s) nuevo(s)?`;
+                modal.classList.remove('hidden');
+
+                const cleanup = (choice) => {
+                    modal.classList.add('hidden');
+                    addBtn.onclick = null;
+                    replaceBtn.onclick = null;
+                    cancelBtn.onclick = null;
+                    resolve(choice);
+                };
+
+                addBtn.onclick = () => cleanup('add');
+                replaceBtn.onclick = () => cleanup('replace');
+                cancelBtn.onclick = () => cleanup('cancel');
+            });
+        }
+
         function getCategoryKey(part) {
             const raw = (part && part.categoria) ? String(part.categoria).trim() : '';
             if (!raw) return '__uncategorized__';
@@ -1151,13 +1418,15 @@
         function buildSearchIndex(part) {
             const iptNames = normalizeFileArray(part.iptFiles).map(f => f.name).join(' ');
             const stlNames = normalizeFileArray(part.stlFiles).map(f => f.name).join(' ');
+            const imgNames = normalizeFileArray(part.imgFiles).map(f => f.name).join(' ');
             part._searchNorm = normalizeText([
                 part.codigo,
                 part.descripcion,
                 part.categoria,
                 part.observaciones,
                 iptNames,
-                stlNames
+                stlNames,
+                imgNames
             ].join(' '));
         }
 
@@ -1176,7 +1445,11 @@
         function hasPendingFileDelta(id) {
             const p = pendingRowFiles[id];
             if (!p) return false;
-            return Object.prototype.hasOwnProperty.call(p, 'ipt') || Object.prototype.hasOwnProperty.call(p, 'stl');
+            return (
+                Object.prototype.hasOwnProperty.call(p, 'ipt') ||
+                Object.prototype.hasOwnProperty.call(p, 'stl') ||
+                Object.prototype.hasOwnProperty.call(p, 'img')
+            );
         }
 
         function isPartRowChangedInDOM(part) {
@@ -1214,7 +1487,11 @@
                 const hasVal = [c ? c.value : r.codigo, d ? d.value : r.descripcion, cat ? cat.value : r.categoria, obs ? obs.value : r.observaciones]
                     .some(x => String(x || '').trim() !== '');
                 const pFiles = pendingRowFiles[r.id];
-                const hasDraftFiles = Boolean((pFiles && pFiles.ipt && pFiles.ipt.length > 0) || (pFiles && pFiles.stl && pFiles.stl.length > 0));
+                const hasDraftFiles = Boolean(
+                    (pFiles && pFiles.ipt && pFiles.ipt.length > 0) ||
+                    (pFiles && pFiles.stl && pFiles.stl.length > 0) ||
+                    (pFiles && pFiles.img && pFiles.img.length > 0)
+                );
                 if (hasVal || hasDraftFiles) count++;
             }
             if (count > 0) {
@@ -1254,6 +1531,7 @@
                 let s = 0;
                 s += normalizeFileArray(p.iptFiles).length * 100;
                 s += normalizeFileArray(p.stlFiles).length * 100;
+                s += normalizeFileArray(p.imgFiles).length * 50;
                 if ((p.descripcion || '').trim()) s += 2;
                 if ((p.categoria || '').trim()) s += 2;
                 if ((p.observaciones || '').trim()) s += 1;
@@ -1282,7 +1560,8 @@
                 await Promise.all(duplicatesToDelete.map(async dup => {
                     const paths = [
                         ...normalizeFileArray(dup.iptFiles).map(f => f.storagePath),
-                        ...normalizeFileArray(dup.stlFiles).map(f => f.storagePath)
+                        ...normalizeFileArray(dup.stlFiles).map(f => f.storagePath),
+                        ...normalizeFileArray(dup.imgFiles).map(f => f.storagePath)
                     ].filter(Boolean);
                     if (paths.length > 0) {
                         await supabaseClient.storage.from(SB_BUCKET).remove(paths);
@@ -1301,7 +1580,8 @@
             let rawParts = localParts.map(lp => ({
                 ...lp,
                 iptFiles: normalizeFileArray(lp.iptFiles || lp.iptFile),
-                stlFiles: normalizeFileArray(lp.stlFiles || lp.stlFile)
+                stlFiles: normalizeFileArray(lp.stlFiles || lp.stlFile),
+                imgFiles: normalizeFileArray(lp.imgFiles)
             }));
 
             if (isSupabaseConnected && supabaseClient) {
@@ -1311,7 +1591,7 @@
                 } else {
                     rawParts = (data || []).map(row => {
                         const localMatch = localMap.get(row.id);
-                        const { iptFiles, stlFiles } = parseFilesFromRow(row, localMatch);
+                        const { iptFiles, stlFiles, imgFiles } = parseFilesFromRow(row, localMatch);
                         return {
                             id: row.id,
                             codigo: row.codigo || '',
@@ -1320,7 +1600,8 @@
                             observaciones: row.observaciones || '',
                             date: row.updated_at || '',
                             iptFiles,
-                            stlFiles
+                            stlFiles,
+                            imgFiles
                         };
                     });
                 }
@@ -1359,14 +1640,20 @@
                 } else if (entry.data) {
                     const cleanName = entry.name.replace(/[^a-zA-Z0-9._-]/g, '_');
                     const newPath = `${partId}/${slot}_${Date.now()}_${i}_${cleanName}`;
-                    const blob = new Blob([entry.data], { type: 'application/octet-stream' });
-                    const { error: uploadErr } = await supabaseClient.storage.from(SB_BUCKET).upload(newPath, blob, { upsert: true });
+                    const contentType = slot === 'img'
+                        ? (entry.type || getImageMimeType(entry.name))
+                        : 'application/octet-stream';
+                    const blob = new Blob([entry.data], { type: contentType });
+                    const { error: uploadErr } = await supabaseClient.storage.from(SB_BUCKET).upload(newPath, blob, {
+                        upsert: true,
+                        contentType
+                    });
                     if (uploadErr) throw new Error(`Storage (.${slot}): ` + uploadErr.message);
 
                     finalFiles.push({
                         name: entry.name,
                         size: entry.data.byteLength,
-                        type: 'application/octet-stream',
+                        type: contentType,
                         storagePath: newPath,
                         data: entry.data
                     });
@@ -1384,6 +1671,7 @@
             const pathsToRemove = [];
             partObj.iptFiles = normalizeFileArray(partObj.iptFiles || partObj.iptFile);
             partObj.stlFiles = normalizeFileArray(partObj.stlFiles || partObj.stlFile);
+            partObj.imgFiles = normalizeFileArray(partObj.imgFiles);
 
             if (Object.prototype.hasOwnProperty.call(slotChanges, 'ipt')) {
                 const targetList = Array.isArray(slotChanges.ipt) ? slotChanges.ipt : [];
@@ -1395,6 +1683,11 @@
                 const targetList = Array.isArray(slotChanges.stl) ? slotChanges.stl : [];
                 partObj.stlFiles = await syncSlotFilesToStorage(partObj.id, 'stl', partObj.stlFiles, targetList, pathsToRemove);
                 invalidatePartSlotBlobUrl(partObj.id, 'stl');
+            }
+
+            if (Object.prototype.hasOwnProperty.call(slotChanges, 'img')) {
+                const targetList = Array.isArray(slotChanges.img) ? slotChanges.img : [];
+                partObj.imgFiles = await syncSlotFilesToStorage(partObj.id, 'img', partObj.imgFiles, targetList, pathsToRemove);
             }
 
             if (pathsToRemove.length > 0) {
@@ -1413,7 +1706,7 @@
                 ipt_name: primaryCad ? primaryCad.name : null,
                 ipt_size: totalCadSize,
                 ipt_path: primaryCad ? primaryCad.storagePath : null,
-                preset_shape: serializeFilesMetadata(partObj.iptFiles, partObj.stlFiles),
+                preset_shape: serializeFilesMetadata(partObj.iptFiles, partObj.stlFiles, partObj.imgFiles),
                 updated_at: new Date().toISOString().split('T')[0]
             });
             if (dbError) throw new Error('Base de datos: ' + dbError.message);
@@ -1434,7 +1727,8 @@
             }
             const paths = [
                 ...normalizeFileArray(part.iptFiles).map(f => f.storagePath),
-                ...normalizeFileArray(part.stlFiles).map(f => f.storagePath)
+                ...normalizeFileArray(part.stlFiles).map(f => f.storagePath),
+                ...normalizeFileArray(part.imgFiles).map(f => f.storagePath)
             ].filter(Boolean);
             if (paths.length > 0) {
                 await supabaseClient.storage.from(SB_BUCKET).remove(paths);
@@ -1524,7 +1818,11 @@
                 const startRow = hasHeader ? 1 : 0;
                 draftRows = draftRows.filter(r => {
                     const p = pendingRowFiles[r.id];
-                    const hasFiles = Boolean((p && p.ipt && p.ipt.length > 0) || (p && p.stl && p.stl.length > 0));
+                    const hasFiles = Boolean(
+                        (p && p.ipt && p.ipt.length > 0) ||
+                        (p && p.stl && p.stl.length > 0) ||
+                        (p && p.img && p.img.length > 0)
+                    );
                     return (r.codigo || r.descripcion || r.categoria || r.observaciones || '').trim() !== '' || hasFiles;
                 });
 
@@ -1612,23 +1910,48 @@
             return list;
         }
 
-        async function onDraftSlotFilesSelected(rowId, slot, event) {
-            const files = Array.from(event.target.files || []);
-            if (files.length === 0) return;
-            syncDraftInputsFromDOM();
-
-            if (!pendingRowFiles[rowId]) pendingRowFiles[rowId] = {};
-            const newEntries = [];
+        async function readSelectedFilesIntoSlots(files) {
+            const bySlot = { ipt: [], stl: [], img: [] };
             for (const file of files) {
+                const slot = getFileExtensionSlot(file.name);
                 const buf = await file.arrayBuffer();
-                newEntries.push({
+                bySlot[slot].push({
                     name: file.name,
                     size: buf.byteLength,
+                    type: slot === 'img' ? (file.type || getImageMimeType(file.name)) : 'application/octet-stream',
                     data: buf,
                     _isNewUpload: true
                 });
             }
-            pendingRowFiles[rowId][slot] = appendFilesToSlotList(pendingRowFiles[rowId][slot] || [], newEntries);
+            return bySlot;
+        }
+
+        async function onDraftFilesSelected(rowId, event) {
+            const files = Array.from(event.target.files || []);
+            event.target.value = '';
+            if (files.length === 0) return;
+            syncDraftInputsFromDOM();
+
+            const pFiles = pendingRowFiles[rowId] || {};
+            const existingCount = (pFiles.ipt || []).length + (pFiles.stl || []).length + (pFiles.img || []).length;
+
+            let mode = 'add';
+            if (existingCount > 0) {
+                const row = draftRows.find(r => r.id === rowId);
+                mode = await askFileConflictResolution((row && row.codigo) || 'Nueva fila', files.length);
+                if (mode === 'cancel') return;
+            }
+
+            const bySlot = await readSelectedFilesIntoSlots(files);
+            if (!pendingRowFiles[rowId]) pendingRowFiles[rowId] = {};
+
+            for (const slot of ['ipt', 'stl', 'img']) {
+                if (mode === 'replace') {
+                    pendingRowFiles[rowId][slot] = bySlot[slot];
+                } else if (bySlot[slot].length > 0) {
+                    pendingRowFiles[rowId][slot] = appendFilesToSlotList(pendingRowFiles[rowId][slot] || [], bySlot[slot]);
+                }
+            }
 
             const row = draftRows.find(r => r.id === rowId);
             if (row && !row.codigo) {
@@ -1639,26 +1962,60 @@
             }
             renderDraftRows();
             updatePendingChangesIndicator();
-            event.target.value = '';
         }
 
-        function removeDraftSlotFile(rowId, slot) {
+        function removeSingleDraftFile(rowId, slot, fileIndex) {
             syncDraftInputsFromDOM();
-            if (pendingRowFiles[rowId]) {
-                delete pendingRowFiles[rowId][slot];
-                if (!pendingRowFiles[rowId].ipt && !pendingRowFiles[rowId].stl) {
-                    delete pendingRowFiles[rowId];
-                }
+            if (!pendingRowFiles[rowId] || !Array.isArray(pendingRowFiles[rowId][slot])) return;
+            pendingRowFiles[rowId][slot].splice(fileIndex, 1);
+            if (
+                (!pendingRowFiles[rowId].ipt || pendingRowFiles[rowId].ipt.length === 0) &&
+                (!pendingRowFiles[rowId].stl || pendingRowFiles[rowId].stl.length === 0) &&
+                (!pendingRowFiles[rowId].img || pendingRowFiles[rowId].img.length === 0)
+            ) {
+                delete pendingRowFiles[rowId];
             }
             renderDraftRows();
             updatePendingChangesIndicator();
         }
 
-        function formatSlotSummaryText(list, fallbackLabel) {
-            if (!list || list.length === 0) return fallbackLabel;
-            if (list.length === 1) return list[0].name;
-            const iam = list.find(f => isIamFileName(f.name));
-            return iam ? `${iam.name} (+${list.length - 1})` : `${list.length} archivos`;
+        function buildDraftFilesChipsHTML(rowId, pFiles) {
+            const items = [];
+            (pFiles.ipt || []).forEach((f, idx) => {
+                items.push(`
+                    <span title="${escapeHTML(f.name)}" class="relative inline-flex items-center gap-1 pl-2 pr-5 py-0.5 rounded bg-[#1da1f2]/15 border border-[#1da1f2]/60 text-[#8fd2fc] font-mono text-[11px] max-w-[155px]">
+                        <i class="fa-solid fa-cube text-[10px] shrink-0"></i>
+                        <span class="truncate">${escapeHTML(f.name)}</span>
+                        <button type="button" onclick="removeSingleDraftFile('${rowId}', 'ipt', ${idx})" title="Quitar archivo" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-600 hover:bg-red-500 text-white text-[9px] flex items-center justify-center shadow">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </span>
+                `);
+            });
+            (pFiles.stl || []).forEach((f, idx) => {
+                items.push(`
+                    <span title="${escapeHTML(f.name)}" class="relative inline-flex items-center gap-1 pl-2 pr-5 py-0.5 rounded bg-white/15 border border-white/75 text-white font-mono text-[11px] max-w-[155px]">
+                        <i class="fa-solid fa-cube text-[10px] shrink-0"></i>
+                        <span class="truncate">${escapeHTML(f.name)}</span>
+                        <button type="button" onclick="removeSingleDraftFile('${rowId}', 'stl', ${idx})" title="Quitar archivo" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-600 hover:bg-red-500 text-white text-[9px] flex items-center justify-center shadow">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </span>
+                `);
+            });
+            (pFiles.img || []).forEach((f, idx) => {
+                const url = getImagePreviewUrl(f);
+                items.push(`
+                    <span title="${escapeHTML(f.name)}" class="relative inline-flex items-center gap-1.5 pl-1 pr-5 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/60 text-emerald-200 font-mono text-[11px] max-w-[155px]">
+                        ${url ? `<img src="${url}" alt="" class="w-4 h-4 rounded object-cover shrink-0">` : '<i class="fa-solid fa-image text-[10px] shrink-0"></i>'}
+                        <span class="truncate">${escapeHTML(f.name)}</span>
+                        <button type="button" onclick="removeSingleDraftFile('${rowId}', 'img', ${idx})" title="Quitar imagen" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-600 hover:bg-red-500 text-white text-[9px] flex items-center justify-center shadow">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </span>
+                `);
+            });
+            return items.join('');
         }
 
         function renderDraftRows() {
@@ -1668,8 +2025,7 @@
 
             draftRows.forEach((row, idx) => {
                 const pFiles = pendingRowFiles[row.id] || {};
-                const iptList = pFiles.ipt || [];
-                const stlList = pFiles.stl || [];
+                const chipsHTML = buildDraftFilesChipsHTML(row.id, pFiles);
 
                 const div = document.createElement('div');
                 div.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center bg-[#1e2227] border border-[#353b42] rounded p-2';
@@ -1686,28 +2042,19 @@
                     <div class="lg:col-span-2">
                         <input type="text" id="draft-obs-${row.id}" value="${escapeHTML(row.observaciones)}" placeholder="Observaciones (opcional)" oninput="updatePendingChangesIndicator()" class="inline-cell-input text-[#aeb6c2]">
                     </div>
-                    <div class="lg:col-span-3 flex items-center justify-end gap-1.5">
-                        <div class="flex-1 min-w-0 flex items-center gap-1">
-                            <label title="${iptList.length ? escapeHTML(iptList.map(f => f.name).join(', ')) : 'Adjuntar archivos .iam / .ipt'}" class="flex-1 min-w-0 cursor-pointer px-2 py-1 rounded ${iptList.length ? 'bg-[#1da1f2]/20 border-[#1da1f2] text-[#8fd2fc]' : 'bg-[#272b30] hover:bg-[#32373e] border-[#3e454e] text-[#d5dbe2]'} border text-[11px] font-mono truncate flex items-center justify-center gap-1">
-                                <i class="fa-solid fa-plus text-[#1da1f2] shrink-0"></i>
-                                <span class="truncate">${escapeHTML(formatSlotSummaryText(iptList, '.iam/.ipt'))}</span>
-                                <input type="file" accept=".ipt,.iam" multiple class="hidden" onchange="onDraftSlotFilesSelected('${row.id}', 'ipt', event)">
-                            </label>
-                            ${iptList.length ? `<button type="button" onclick="removeDraftSlotFile('${row.id}', 'ipt')" title="Quitar archivos CAD" class="px-1.5 py-1 rounded bg-[#272b30] hover:bg-red-950/70 border border-[#3e454e] text-red-400 text-[11px]"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                    <div class="lg:col-span-3 flex items-center justify-between gap-3">
+                        <div class="flex flex-wrap items-center gap-2 min-w-0 flex-1 py-0.5">
+                            ${chipsHTML || '<span class="text-[11px] text-[#6d7682] font-mono">Sin archivos</span>'}
                         </div>
-
-                        <div class="flex-1 min-w-0 flex items-center gap-1">
-                            <label title="${stlList.length ? escapeHTML(stlList.map(f => f.name).join(', ')) : 'Adjuntar uno o varios .stl'}" class="flex-1 min-w-0 cursor-pointer px-2 py-1 rounded ${stlList.length ? 'bg-white/15 border-white/80 text-white' : 'bg-[#272b30] hover:bg-[#32373e] border-[#3e454e] text-[#d5dbe2]'} border text-[11px] font-mono truncate flex items-center justify-center gap-1">
-                                <i class="fa-solid fa-plus text-white shrink-0"></i>
-                                <span class="truncate">${escapeHTML(formatSlotSummaryText(stlList, '.stl'))}</span>
-                                <input type="file" accept=".stl" multiple class="hidden" onchange="onDraftSlotFilesSelected('${row.id}', 'stl', event)">
+                        <div class="flex items-center gap-1.5 shrink-0 ml-2">
+                            <label title="Cargar .iam, .ipt, .stl o imágenes" class="cursor-pointer w-7 h-7 rounded bg-[#272b30] hover:bg-[#32373e] border border-[#3e454e] hover:border-[#1da1f2] text-[#1da1f2] flex items-center justify-center transition">
+                                <i class="fa-solid fa-plus text-xs"></i>
+                                <input type="file" accept="${ACCEPTED_UPLOAD_EXTENSIONS}" multiple class="hidden" onchange="onDraftFilesSelected('${row.id}', event)">
                             </label>
-                            ${stlList.length ? `<button type="button" onclick="removeDraftSlotFile('${row.id}', 'stl')" title="Quitar archivos .stl" class="px-1.5 py-1 rounded bg-[#272b30] hover:bg-red-950/70 border border-[#3e454e] text-red-400 text-[11px]"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                            <button type="button" onclick="removeDraftRow('${row.id}')" title="Quitar fila" class="w-7 h-7 rounded bg-[#272b30] hover:bg-red-950/60 border border-[#3e454e] text-[#9aa2ad] hover:text-red-400 text-xs flex items-center justify-center transition">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
                         </div>
-
-                        <button type="button" onclick="removeDraftRow('${row.id}')" title="Quitar fila" class="px-2 py-1 rounded bg-[#272b30] hover:bg-red-950/60 text-[#9aa2ad] hover:text-red-400 text-xs shrink-0">
-                            <i class="fa-solid fa-trash"></i>
-                        </button>
                     </div>
                 `;
                 frag.appendChild(div);
@@ -1717,62 +2064,78 @@
             container.appendChild(frag);
         }
 
-        async function onTableRowSlotFilesSelected(partId, slot, event) {
-            const files = Array.from(event.target.files || []);
-            if (files.length === 0) return;
+        async function applyFilesToExistingPart(partId, files) {
             const part = allParts.find(p => p.id === partId);
-            if (!part) return;
+            if (!part || !files || files.length === 0) return;
 
-            const currentList = getActiveSlotFiles(part, slot);
-            const newEntries = [];
-            for (const file of files) {
-                const buf = await file.arrayBuffer();
-                newEntries.push({
-                    name: file.name,
-                    size: buf.byteLength,
-                    data: buf,
-                    _isNewUpload: true
-                });
+            const existingTotal = getPartTotalActiveFilesCount(part);
+            let mode = 'add';
+            if (existingTotal > 0) {
+                mode = await askFileConflictResolution(part.codigo || part.id, files.length);
+                if (mode === 'cancel') return;
             }
 
+            const bySlot = await readSelectedFilesIntoSlots(files);
             if (!pendingRowFiles[partId]) pendingRowFiles[partId] = {};
-            pendingRowFiles[partId][slot] = appendFilesToSlotList(currentList, newEntries);
 
-            invalidatePartSlotBlobUrl(partId, slot);
-            await buildOrRefreshSlotBlobUrl(part, slot);
+            for (const slot of ['ipt', 'stl', 'img']) {
+                if (mode === 'replace') {
+                    pendingRowFiles[partId][slot] = bySlot[slot];
+                } else if (bySlot[slot].length > 0) {
+                    const currentList = getActiveSlotFiles(part, slot);
+                    pendingRowFiles[partId][slot] = appendFilesToSlotList(currentList, bySlot[slot]);
+                }
+                if (slot !== 'img') {
+                    invalidatePartSlotBlobUrl(partId, slot);
+                    await buildOrRefreshSlotBlobUrl(part, slot);
+                }
+            }
+
             renderPartsTable();
             updatePendingChangesIndicator();
-            showToast(`${files.length} archivo(s) asignado(s). Pulsa Guardar para confirmar.`);
-            event.target.value = '';
+            showToast(`${files.length} archivo(s) ${mode === 'replace' ? 'reemplazado(s)' : 'agregado(s)'}. Pulsa Guardar para confirmar.`);
         }
 
-        function removeTableRowSlotFiles(partId, slot) {
+        async function onTableRowFilesSelected(partId, event) {
+            const files = Array.from(event.target.files || []);
+            event.target.value = '';
+            if (files.length === 0) return;
+            await applyFilesToExistingPart(partId, files);
+        }
+
+        function removeSingleTableRowFile(partId, slot, fileIndex) {
             if (!isAdmin) return;
             const part = allParts.find(p => p.id === partId);
             if (!part) return;
 
-            const savedList = normalizeFileArray(part[slot === 'stl' ? 'stlFiles' : 'iptFiles']);
-            if (savedList.length === 0) {
-                if (pendingRowFiles[partId]) {
-                    delete pendingRowFiles[partId][slot];
-                    if (!Object.prototype.hasOwnProperty.call(pendingRowFiles[partId], 'ipt') &&
-                        !Object.prototype.hasOwnProperty.call(pendingRowFiles[partId], 'stl')) {
-                        delete pendingRowFiles[partId];
-                    }
-                }
-                invalidatePartSlotBlobUrl(partId, slot);
-                renderPartsTable();
-                updatePendingChangesIndicator();
-                showToast(`Archivos pendientes quitados.`);
-                return;
-            }
+            const currentList = [...getActiveSlotFiles(part, slot)];
+            if (fileIndex < 0 || fileIndex >= currentList.length) return;
+            currentList.splice(fileIndex, 1);
 
             if (!pendingRowFiles[partId]) pendingRowFiles[partId] = {};
-            pendingRowFiles[partId][slot] = [];
-            invalidatePartSlotBlobUrl(partId, slot);
+            pendingRowFiles[partId][slot] = currentList;
+
+            const savedField = getSlotFieldName(slot);
+            const savedList = normalizeFileArray(part[savedField]);
+            if (savedList.length === 0 && currentList.length === 0) {
+                delete pendingRowFiles[partId][slot];
+                if (
+                    !Object.prototype.hasOwnProperty.call(pendingRowFiles[partId], 'ipt') &&
+                    !Object.prototype.hasOwnProperty.call(pendingRowFiles[partId], 'stl') &&
+                    !Object.prototype.hasOwnProperty.call(pendingRowFiles[partId], 'img')
+                ) {
+                    delete pendingRowFiles[partId];
+                }
+            }
+
+            if (slot !== 'img') {
+                invalidatePartSlotBlobUrl(partId, slot);
+                buildOrRefreshSlotBlobUrl(part, slot);
+            }
+
             renderPartsTable();
             updatePendingChangesIndicator();
-            showToast(`Archivos marcados para eliminar. Pulsa Guardar para confirmar.`);
+            showToast('Archivo quitado. Pulsa Guardar para confirmar.');
         }
 
         async function saveAllProgress() {
@@ -1834,7 +2197,11 @@
                     const categoria = (row.categoria || '').trim();
                     const observaciones = (row.observaciones || '').trim();
                     const slotChanges = pendingRowFiles[row.id] ? { ...pendingRowFiles[row.id] } : {};
-                    const hasFiles = Boolean((slotChanges.ipt && slotChanges.ipt.length > 0) || (slotChanges.stl && slotChanges.stl.length > 0));
+                    const hasFiles = Boolean(
+                        (slotChanges.ipt && slotChanges.ipt.length > 0) ||
+                        (slotChanges.stl && slotChanges.stl.length > 0) ||
+                        (slotChanges.img && slotChanges.img.length > 0)
+                    );
 
                     const hasAnyData = Boolean(codigo || descripcion || categoria || observaciones || hasFiles);
                     if (!hasAnyData) { remainingDrafts.push(row); continue; }
@@ -1855,7 +2222,8 @@
                         observaciones,
                         date: new Date().toISOString().split('T')[0],
                         iptFiles: [],
-                        stlFiles: []
+                        stlFiles: [],
+                        imgFiles: []
                     };
 
                     newDraftsToPersist.push({ newPart, slotChanges, draftId: row.id });
@@ -1930,7 +2298,7 @@
                 document.querySelectorAll('tr[data-part-id]').forEach(r => r.classList.remove('row-drop-active'));
                 if (row) {
                     row.classList.add('row-drop-active');
-                    targetLabel.textContent = `Soltar .IAM / .IPT / .STL en fila: ${row.dataset.partCode || row.dataset.partId}`;
+                    targetLabel.textContent = `Soltar archivos/imágenes en fila: ${row.dataset.partCode || row.dataset.partId}`;
                 } else {
                     targetLabel.textContent = 'Mueve el cursor sobre la fila o suelta aquí para agregar al listado';
                 }
@@ -1958,29 +2326,7 @@
                 const files = Array.from(e.dataTransfer.files);
                 if (droppedRow) {
                     const partId = droppedRow.dataset.partId;
-                    const part = allParts.find(p => p.id === partId);
-                    if (!part) return;
-                    if (!pendingRowFiles[partId]) pendingRowFiles[partId] = {};
-
-                    const bySlot = { ipt: [], stl: [] };
-                    for (const file of files) {
-                        const slot = getFileExtensionSlot(file.name);
-                        const buf = await file.arrayBuffer();
-                        bySlot[slot].push({ name: file.name, size: buf.byteLength, data: buf, _isNewUpload: true });
-                    }
-
-                    for (const slot of ['ipt', 'stl']) {
-                        if (bySlot[slot].length > 0) {
-                            const currentList = getActiveSlotFiles(part, slot);
-                            pendingRowFiles[partId][slot] = appendFilesToSlotList(currentList, bySlot[slot]);
-                            invalidatePartSlotBlobUrl(partId, slot);
-                            await buildOrRefreshSlotBlobUrl(part, slot);
-                        }
-                    }
-
-                    renderPartsTable();
-                    updatePendingChangesIndicator();
-                    showToast(`Asignado(s) ${files.length} archivo(s). Pulsa Guardar para confirmar.`);
+                    await applyFilesToExistingPart(partId, files);
                 } else {
                     syncDraftInputsFromDOM();
                     const knownCodes = getKnownCodeKeys();
@@ -2001,12 +2347,7 @@
                             categoria: '',
                             observaciones: ''
                         });
-                        pendingRowFiles[rowId] = { ipt: [], stl: [] };
-                        for (const file of files) {
-                            const slot = getFileExtensionSlot(file.name);
-                            const buf = await file.arrayBuffer();
-                            pendingRowFiles[rowId][slot].push({ name: file.name, size: buf.byteLength, data: buf, _isNewUpload: true });
-                        }
+                        pendingRowFiles[rowId] = await readSelectedFilesIntoSlots(files);
                         renderDraftRows();
                         updatePendingChangesIndicator();
                         showToast(`Ensamble "${candidateCode}" creado con ${files.length} archivo(s). Pulsa Guardar.`);
@@ -2026,7 +2367,13 @@
                         const candidateCode = file.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
                         const key = normalizeCodeKey(candidateCode);
                         const buf = await file.arrayBuffer();
-                        const entry = { name: file.name, size: buf.byteLength, data: buf, _isNewUpload: true };
+                        const entry = {
+                            name: file.name,
+                            size: buf.byteLength,
+                            type: slot === 'img' ? (file.type || getImageMimeType(file.name)) : 'application/octet-stream',
+                            data: buf,
+                            _isNewUpload: true
+                        };
 
                         if (key && draftByCodeKey.has(key)) {
                             const existingDraft = draftByCodeKey.get(key);
@@ -2061,34 +2408,60 @@
             });
         }
 
-        function buildSlotControlHTML(part, slot) {
+        function buildAdminIndividualFilesHTML(part) {
+            const chips = [];
+            const iptList = getActiveSlotFiles(part, 'ipt');
+            const stlList = getActiveSlotFiles(part, 'stl');
+            const imgList = getActiveSlotFiles(part, 'img');
+
+            iptList.forEach((f, idx) => {
+                const pendingRing = f._isNewUpload ? 'ring-1 ring-amber-400/80' : '';
+                chips.push(`
+                    <span title="${escapeHTML(f.name)}" class="relative inline-flex items-center gap-1 pl-2 pr-5 py-1 rounded bg-[#1da1f2]/15 border border-[#1da1f2]/60 text-[#38b6ff] ${pendingRing} font-mono text-[11px] max-w-[140px]">
+                        <i class="fa-solid fa-cube text-[10px] shrink-0"></i>
+                        <span class="truncate">${escapeHTML(f.name)}</span>
+                        <button type="button" onclick="event.stopPropagation(); removeSingleTableRowFile('${part.id}', 'ipt', ${idx})" title="Eliminar ${escapeHTML(f.name)}" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-600 hover:bg-red-500 text-white text-[9px] flex items-center justify-center shadow">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </span>
+                `);
+            });
+
+            stlList.forEach((f, idx) => {
+                const pendingRing = f._isNewUpload ? 'ring-1 ring-amber-400/80' : '';
+                chips.push(`
+                    <span title="${escapeHTML(f.name)}" class="relative inline-flex items-center gap-1 pl-2 pr-5 py-1 rounded bg-white/15 border border-white/75 text-white ${pendingRing} font-mono text-[11px] max-w-[140px]">
+                        <i class="fa-solid fa-cube text-[10px] shrink-0"></i>
+                        <span class="truncate">${escapeHTML(f.name)}</span>
+                        <button type="button" onclick="event.stopPropagation(); removeSingleTableRowFile('${part.id}', 'stl', ${idx})" title="Eliminar ${escapeHTML(f.name)}" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-600 hover:bg-red-500 text-white text-[9px] flex items-center justify-center shadow">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </span>
+                `);
+            });
+
+            imgList.forEach((f, idx) => {
+                const url = getImagePreviewUrl(f);
+                const pendingRing = f._isNewUpload ? 'ring-1 ring-amber-400/80' : '';
+                chips.push(`
+                    <span title="${escapeHTML(f.name)}" class="relative inline-flex items-center gap-1 pl-1 pr-5 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/60 text-emerald-200 ${pendingRing} font-mono text-[11px] max-w-[140px]">
+                        ${url ? `<img src="${url}" alt="" class="w-5 h-5 rounded object-cover shrink-0">` : '<i class="fa-solid fa-image text-[10px] shrink-0"></i>'}
+                        <span class="truncate">${escapeHTML(f.name)}</span>
+                        <button type="button" onclick="event.stopPropagation(); removeSingleTableRowFile('${part.id}', 'img', ${idx})" title="Eliminar ${escapeHTML(f.name)}" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-600 hover:bg-red-500 text-white text-[9px] flex items-center justify-center shadow">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </span>
+                `);
+            });
+
+            return chips.join('');
+        }
+
+        function buildReadSlotPillHTML(part, slot) {
             const info = getSlotDisplayInfo(part, slot);
+            if (!info) return '';
             const isStl = slot === 'stl';
             const isSelected = selectedPartId === part.id;
-
-            const pendingObj = pendingRowFiles[part.id];
-            const isPendingDelete = Boolean(pendingObj && Object.prototype.hasOwnProperty.call(pendingObj, slot) && Array.isArray(pendingObj[slot]) && pendingObj[slot].length === 0);
-            const isPendingUpload = Boolean(pendingObj && Array.isArray(pendingObj[slot]) && pendingObj[slot].some(f => f._isNewUpload));
-
-            if (!info) {
-                if (!isAdmin) return '';
-
-                const acceptAttr = isStl ? '.stl' : '.ipt,.iam';
-                const btnLabel = isStl ? '.stl' : '.iam/.ipt';
-                const addBorderColor = isPendingDelete
-                    ? 'border-red-500/60 text-red-300 bg-red-950/30'
-                    : isStl
-                        ? 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-[#cfd5de]'
-                        : 'bg-[#1e2227] hover:bg-[#32373e] border-[#3e454e] text-[#69c3fa]';
-
-                return `
-                    <label onclick="event.stopPropagation()" title="${isPendingDelete ? 'Marcado para eliminar. Clic para cargar otro' : `Cargar archivo(s) ${btnLabel}`}" class="cursor-pointer inline-flex items-center justify-center gap-1 px-2 py-1 rounded ${addBorderColor} border font-mono text-[11px] transition">
-                        <i class="fa-solid fa-plus text-[10px] text-amber-400"></i>
-                        <span>${btnLabel}</span>
-                        <input type="file" accept="${acceptAttr}" multiple class="hidden" onchange="onTableRowSlotFilesSelected('${part.id}', '${slot}', event)">
-                    </label>
-                `;
-            }
 
             let pillClasses;
             let iconClasses;
@@ -2104,44 +2477,47 @@
                 iconClasses = 'text-[#1da1f2]';
             }
 
-            const pendingRing = isPendingUpload ? 'ring-1 ring-amber-400/80' : '';
             const namesTooltip = info.files.map(f => f.name).join('\n');
             const actionHint = info.files.length > 1
                 ? `Arrastrar o descargar paquete (${info.downloadName}):\n${namesTooltip}`
                 : `Arrastrar o descargar: ${info.downloadName}`;
 
-            const pillHTML = `
+            return `
                 <div
                     draggable="true"
                     ondragstart="handleSlotDragStart(event, '${part.id}', '${slot}')"
                     onclick="event.stopPropagation(); downloadPartSlotFile('${part.id}', '${slot}')"
                     title="${escapeHTML(actionHint)}"
-                    class="draggable-ipt-pill inline-flex items-center justify-center gap-1 px-2 py-1 rounded ${pillClasses} ${pendingRing} border font-mono text-xs font-semibold transition"
+                    class="draggable-ipt-pill inline-flex items-center justify-center gap-1 px-2 py-1 rounded ${pillClasses} border font-mono text-xs font-semibold transition"
                 >
                     <i class="fa-solid ${info.files.length > 1 ? 'fa-cubes' : 'fa-cube'} ${iconClasses} text-[11px] transition-colors"></i>
                     <span>${escapeHTML(info.label)}</span>
                 </div>
             `;
+        }
 
-            if (!isAdmin) return pillHTML;
+        function buildReadImagesControlHTML(part) {
+            const imgFiles = getActiveSlotFiles(part, 'img');
+            if (imgFiles.length === 0) return '';
 
-            const acceptAttr = isStl ? '.stl' : '.ipt,.iam';
+            const firstUrl = getImagePreviewUrl(imgFiles[0]);
+            const countBadge = imgFiles.length > 1
+                ? `<span class="font-mono text-[11px] font-semibold text-emerald-200">+${imgFiles.length - 1}</span>`
+                : '';
+
             return `
-                <div class="inline-flex items-center gap-0.5">
-                    ${pillHTML}
-                    <label onclick="event.stopPropagation()" title="Agregar más archivos (${acceptAttr})" class="cursor-pointer px-1.5 py-1 rounded bg-[#1e2227] hover:bg-[#32373e] border border-[#3e454e] text-amber-400 text-[10px] transition">
-                        <i class="fa-solid fa-plus"></i>
-                        <input type="file" accept="${acceptAttr}" multiple class="hidden" onchange="onTableRowSlotFilesSelected('${part.id}', '${slot}', event)">
-                    </label>
-                    <button
-                        type="button"
-                        onclick="event.stopPropagation(); removeTableRowSlotFiles('${part.id}', '${slot}')"
-                        title="Eliminar archivo(s) de este grupo"
-                        class="px-1.5 py-1 rounded bg-[#1e2227] hover:bg-red-950/70 border border-[#3e454e] hover:border-red-500/60 text-[#9aa2ad] hover:text-red-400 text-[10px] transition"
-                    >
-                        <i class="fa-solid fa-xmark"></i>
-                    </button>
-                </div>
+                <button
+                    type="button"
+                    onclick="event.stopPropagation(); openImageViewerModal('${part.id}', 0)"
+                    title="Ver imagen${imgFiles.length > 1 ? `s (${imgFiles.length})` : ''}"
+                    class="inline-flex items-center gap-1.5 p-0.5 pr-1.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/60 hover:border-emerald-300 transition cursor-pointer"
+                >
+                    ${firstUrl
+                        ? `<img src="${firstUrl}" alt="${escapeHTML(imgFiles[0].name || 'Foto')}" class="w-6 h-6 rounded object-cover">`
+                        : `<span class="w-6 h-6 rounded bg-emerald-500/20 flex items-center justify-center text-emerald-300 text-xs"><i class="fa-solid fa-image"></i></span>`
+                    }
+                    ${countBadge || '<i class="fa-solid fa-magnifying-glass-plus text-[10px] text-emerald-300"></i>'}
+                </button>
             `;
         }
 
@@ -2162,11 +2538,31 @@
         }
 
         function buildFilesCellHTML(part) {
-            const cadHTML = buildSlotControlHTML(part, 'ipt');
-            const stlHTML = buildSlotControlHTML(part, 'stl');
-            const viewHTML = buildStlViewButtonHTML(part);
+            if (isAdmin) {
+                const chipsHTML = buildAdminIndividualFilesHTML(part);
+                return `
+                    <div class="flex items-center justify-between gap-4 min-w-[180px]">
+                        <div class="flex flex-wrap items-center gap-2 py-0.5">
+                            ${chipsHTML}
+                        </div>
+                        <label
+                            onclick="event.stopPropagation()"
+                            title="Cargar archivos (.iam, .ipt, .stl) o imágenes"
+                            class="cursor-pointer w-7 h-7 rounded bg-[#1e2227] hover:bg-[#32373e] border border-[#3e454e] hover:border-[#1da1f2] text-[#1da1f2] flex items-center justify-center shrink-0 ml-auto transition"
+                        >
+                            <i class="fa-solid fa-plus text-xs"></i>
+                            <input type="file" accept="${ACCEPTED_UPLOAD_EXTENSIONS}" multiple class="hidden" onchange="onTableRowFilesSelected('${part.id}', event)">
+                        </label>
+                    </div>
+                `;
+            }
 
-            if (!cadHTML && !stlHTML && !viewHTML) {
+            const cadHTML = buildReadSlotPillHTML(part, 'ipt');
+            const stlHTML = buildReadSlotPillHTML(part, 'stl');
+            const viewHTML = buildStlViewButtonHTML(part);
+            const imgHTML = buildReadImagesControlHTML(part);
+
+            if (!cadHTML && !stlHTML && !viewHTML && !imgHTML) {
                 return '';
             }
 
@@ -2175,9 +2571,10 @@
                 : '';
 
             return `
-                <div class="inline-flex items-center justify-center gap-2">
+                <div class="inline-flex flex-wrap items-center justify-center gap-2">
                     ${cadHTML}
                     ${stlGroupHTML}
+                    ${imgHTML}
                 </div>
             `;
         }
@@ -2199,7 +2596,8 @@
                 const hay = part._searchNorm || normalizeText([
                     part.codigo, part.descripcion, part.categoria, part.observaciones,
                     ...normalizeFileArray(part.iptFiles).map(f => f.name),
-                    ...normalizeFileArray(part.stlFiles).map(f => f.name)
+                    ...normalizeFileArray(part.stlFiles).map(f => f.name),
+                    ...normalizeFileArray(part.imgFiles).map(f => f.name)
                 ].join(' '));
                 for (let i = 0; i < terms.length; i++) {
                     if (!hay.includes(terms[i])) return false;
@@ -2274,8 +2672,8 @@
                             <td class="py-2 px-2.5 min-w-[180px]">
                                 <input type="text" id="edit-obs-${part.id}" value="${escapeHTML(part.observaciones || '')}" class="inline-cell-input ${hasObs ? 'text-red-200 border-red-400/50' : 'text-[#aeb6c2]'}">
                             </td>
-                            <td class="py-2 px-2.5 whitespace-nowrap text-center">
-                                <span class="files-cell-slot">${filesCellHTML}</span>
+                            <td class="py-2 px-2.5">
+                                <div class="files-cell-slot">${filesCellHTML}</div>
                             </td>
                             <td class="py-2 px-2.5 whitespace-nowrap text-right">
                                 <button onclick="event.stopPropagation(); confirmDeletePart('${part.id}')" title="Eliminar ítem completo" class="px-2 py-1 rounded bg-[#1e2227] hover:bg-red-950/60 text-[#aeb6c2] hover:text-red-400 text-xs transition">
@@ -2372,6 +2770,12 @@
                     type: f.type,
                     base64Data: f.data ? arrayBufferToBase64(f.data) : null
                 }));
+                clean.imgFiles = normalizeFileArray(clean.imgFiles).map(f => ({
+                    name: f.name,
+                    size: f.size,
+                    type: f.type,
+                    base64Data: f.data ? arrayBufferToBase64(f.data) : null
+                }));
                 return clean;
             });
             const blob = new Blob([JSON.stringify({ parts }, null, 2)], { type: 'application/json' });
@@ -2392,6 +2796,7 @@
                 const slotChanges = {};
                 const rawIpts = normalizeFileArray(item.iptFiles || item.iptFile);
                 const rawStls = normalizeFileArray(item.stlFiles || item.stlFile);
+                const rawImgs = normalizeFileArray(item.imgFiles);
 
                 if (rawIpts.some(f => f.base64Data)) {
                     slotChanges.ipt = rawIpts.filter(f => f.base64Data).map(f => ({
@@ -2409,8 +2814,18 @@
                         _isNewUpload: true
                     }));
                 }
+                if (rawImgs.some(f => f.base64Data)) {
+                    slotChanges.img = rawImgs.filter(f => f.base64Data).map(f => ({
+                        name: f.name,
+                        size: f.size,
+                        type: f.type || getImageMimeType(f.name),
+                        data: base64ToArrayBuffer(f.base64Data),
+                        _isNewUpload: true
+                    }));
+                }
                 item.iptFiles = [];
                 item.stlFiles = [];
+                item.imgFiles = [];
                 await persistPartRecord(item, slotChanges);
             }
             allParts = await fetchAllParts(true);
@@ -2463,6 +2878,8 @@
         window.getActiveSlotFiles = getActiveSlotFiles;
         window.ensurePartSlotBuffers = ensurePartSlotBuffers;
         window.showToast = showToast;
+        window.closeImageViewerModal = closeImageViewerModal;
+        window.navigateImageViewer = navigateImageViewer;
 
         window.addEventListener('DOMContentLoaded', async () => {
             await initIndexedDB();
