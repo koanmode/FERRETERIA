@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DATAWAVES - FERRETERÍA CAD (.IAM / .IPT / .STL)</title>
+    <title>DATAWAVES - CATÁLOGO & FERRETERÍA CAD</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -161,8 +161,8 @@
 
     <header class="sticky top-0 z-30 bg-[#15181c] border-b border-[#2a2f36] h-12 flex items-center justify-between px-3 sm:px-5 gap-3">
         <div class="flex items-center gap-3 min-w-0">
-            <h1 class="font-semibold text-xs sm:text-sm tracking-wider uppercase text-[#e6eaef] truncate">
-                DATAWAVES - FERRETERÍA CAD (.IAM / .IPT / .STL)
+            <h1 id="app-header-title" class="font-semibold text-xs sm:text-sm tracking-wider uppercase text-[#e6eaef] truncate">
+                DATAWAVES - CATÁLOGO
             </h1>
             <span id="db-mode-pill" class="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded bg-[#23272c] text-[#b5bcc6] border border-[#343a42]">
                 <span id="db-mode-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
@@ -206,7 +206,7 @@
                 id="ai-drawer-toggle-btn"
                 type="button"
                 onclick="toggleAiSidebar()"
-                title="Abrir Asistente IA de Ferretería"
+                title="Abrir menú lateral y Asistente IA"
                 class="ml-1 px-2.5 py-1.5 rounded bg-[#252a30] hover:bg-[#2f353d] border border-[#383e47] hover:border-[#1da1f2] text-[#e2e6ec] hover:text-[#1da1f2] text-sm transition flex items-center justify-center"
             >
                 <i class="fa-solid fa-bars"></i>
@@ -214,11 +214,11 @@
         </div>
     </header>
 
-    <!-- Backdrop y Menú Lateral Derecho con Inteligencia Artificial -->
+    <!-- Backdrop y Menú Lateral Derecho (Módulos + Asistente IA) -->
     <div id="ai-sidebar-backdrop" onclick="closeAiSidebar()" class="fixed inset-0 z-40 bg-black/60 hidden transition-opacity"></div>
     <aside
         id="ai-right-sidebar"
-        aria-label="Asistente IA DataWaves"
+        aria-label="Menú Lateral y Asistente IA DataWaves"
         class="fixed top-0 right-0 z-50 h-full w-full sm:w-[430px] max-w-full bg-[#1a1e23] border-l border-[#343a42] shadow-2xl transform translate-x-full transition-transform duration-200 ease-out flex flex-col"
     >
         <div class="bg-[#15181c] border-b border-[#2c323b] px-4 py-3 flex items-center justify-between gap-2 shrink-0">
@@ -227,8 +227,8 @@
                     <i class="fa-solid fa-microchip text-xs"></i>
                 </span>
                 <div class="min-w-0">
-                    <h2 class="text-xs font-bold uppercase tracking-wider text-white truncate">Asistente IA • Ferretería CAD</h2>
-                    <p class="text-[10px] font-mono text-[#9aa2ad] truncate">Consulta etiquetas, herrajes, modelos y rutas</p>
+                    <h2 class="text-xs font-bold uppercase tracking-wider text-white truncate">Menú & Asistente IA</h2>
+                    <p class="text-[10px] font-mono text-[#9aa2ad] truncate">Módulos y consultas de ferretería</p>
                 </div>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
@@ -243,12 +243,34 @@
                 <button
                     type="button"
                     onclick="closeAiSidebar()"
-                    title="Cerrar panel"
+                    title="Cerrar menú"
                     class="px-2.5 py-1 rounded bg-[#23272c] hover:bg-red-950/70 border border-[#383e47] hover:border-red-500/60 text-xs text-[#d5dbe2] hover:text-red-300 transition"
                 >
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
+        </div>
+
+        <!-- Selector de Módulos: al estar en CATALOGO muestra FERRETERIA, y al estar en FERRETERIA muestra CATALOGO -->
+        <div class="bg-[#1e2228] border-b border-[#2e343d] px-4 py-2.5 shrink-0 space-y-2">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-[#8e97a3]">Módulos</span>
+                <span id="sidebar-current-module-badge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-[#1da1f2]/15 border border-[#1da1f2]/40 text-[#69c3fa]">
+                    ACTIVO: CATÁLOGO
+                </span>
+            </div>
+            <button
+                id="sidebar-switch-module-btn"
+                type="button"
+                onclick="switchActiveModule(currentModule === 'catalog' ? 'hardware' : 'catalog')"
+                class="w-full px-3 py-2 rounded bg-[#262b33] hover:bg-[#2f3640] border border-[#3c4450] hover:border-[#1da1f2] text-xs font-semibold text-white transition flex items-center justify-between gap-2"
+            >
+                <span class="flex items-center gap-2">
+                    <i id="sidebar-switch-icon" class="fa-solid fa-wrench text-[#1da1f2]"></i>
+                    <span id="sidebar-switch-label">FERRETERÍA</span>
+                </span>
+                <i class="fa-solid fa-arrow-right-arrow-left text-[11px] text-[#9aa2ad]"></i>
+            </button>
         </div>
 
         <div class="bg-[#20242a] border-b border-[#2e343d] px-4 py-2 flex flex-wrap items-center gap-1.5 shrink-0">
@@ -262,10 +284,10 @@
             </button>
             <button
                 type="button"
-                onclick="askSampleAiQuestion('¿Qué modelos tienen inconsistencias?')"
+                onclick="askSampleAiQuestion('¿Qué ítems tienen notas o inconsistencias?')"
                 class="px-2 py-0.5 rounded bg-[#272c33] hover:bg-[#313740] border border-[#3a414c] text-[11px] text-[#cfd5de] transition"
             >
-                Ítems con inconsistencias
+                Notas / inconsistencias
             </button>
         </div>
 
@@ -289,7 +311,7 @@
                 </button>
             </div>
             <div class="flex items-center justify-between text-[10px] font-mono text-[#7c8591]">
-                <span>Analiza etiquetas, descripciones, categorías y archivos</span>
+                <span>Analiza Catálogo, Ferretería y etiquetas</span>
                 <span>Enter para enviar</span>
             </div>
         </form>
@@ -308,11 +330,11 @@
                         type="button"
                         id="filter-obs-btn"
                         onclick="toggleOnlyObservationsFilter()"
-                        title="Mostrar únicamente los ítems que tienen inconsistencias"
+                        title="Mostrar únicamente los ítems que tienen notas / inconsistencias"
                         class="px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-xs text-[#e2e6ec] transition flex items-center gap-1.5"
                     >
                         <span class="w-2 h-2 rounded-full bg-red-400"></span>
-                        <span>Con inconsistencias</span>
+                        <span id="filter-obs-label">Con notas</span>
                         <span id="obs-total-count" class="font-mono text-[10px] text-[#9aa2ad]">(0)</span>
                     </button>
                     <button onclick="clearMultiSearch()" class="px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-xs text-[#e2e6ec] transition">
@@ -322,11 +344,11 @@
             </div>
 
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                <input type="text" id="multi-search-1" placeholder="Filtro 1..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
-                <input type="text" id="multi-search-2" placeholder="Filtro 2..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
-                <input type="text" id="multi-search-3" placeholder="Filtro 3..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
-                <input type="text" id="multi-search-4" placeholder="Filtro 4..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
-                <input type="text" id="multi-search-5" placeholder="Filtro 5..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="multi-search-1" placeholder="Filtro 1..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c434b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="multi-search-2" placeholder="Filtro 2..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c434b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="multi-search-3" placeholder="Filtro 3..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c434b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="multi-search-4" placeholder="Filtro 4..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c434b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="multi-search-5" placeholder="Filtro 5..." class="multi-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c434b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
             </div>
         </section>
 
@@ -334,12 +356,21 @@
             <div class="dw-card-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">
                     <i class="fa-solid fa-table-list text-[#1da1f2]"></i>
-                    <span>CARGA RÁPIDA / EXCEL (SIN DUPLICADOS POR CÓDIGO)</span>
+                    <span id="quick-create-title">CARGA RÁPIDA / CSV / EXCEL (SIN DUPLICADOS POR CÓDIGO)</span>
                 </div>
                 <div class="flex flex-wrap items-center gap-1.5">
-                    <label title="Importar Excel (.xlsx, .xls, .csv)" class="cursor-pointer px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-[#e2e6ec] text-xs font-medium transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-file-excel text-emerald-400"></i> Importar Excel
-                        <input type="file" id="import-excel-input" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleExcelImport(event)">
+                    <button
+                        id="export-csv-btn"
+                        type="button"
+                        onclick="exportCatalogCSV()"
+                        title="Exportar CSV en MAYÚSCULA"
+                        class="px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-[#e2e6ec] text-xs font-medium transition flex items-center gap-1.5"
+                    >
+                        <i class="fa-solid fa-file-csv text-[#1da1f2]"></i> Exportar CSV
+                    </button>
+                    <label title="Importar CSV o Excel (.csv, .xlsx, .xls)" class="cursor-pointer px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-[#e2e6ec] text-xs font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel text-emerald-400"></i> Importar CSV / Excel
+                        <input type="file" id="import-excel-input" accept=".csv,.xlsx,.xls" class="hidden" onchange="handleExcelImport(event)">
                     </label>
                     <button type="button" onclick="addDraftRow()" class="px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-[#e2e6ec] text-xs font-medium transition flex items-center gap-1.5">
                         <i class="fa-solid fa-plus text-[#1da1f2]"></i> Agregar fila
@@ -355,7 +386,7 @@
         <section class="dw-card overflow-hidden">
             <div class="dw-card-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">COMPONENTES CAD (.IAM / .IPT / .STL / IMÁGENES) • AGRUPADOS POR CATEGORÍA</span>
+                    <span id="table-section-title" class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">CATÁLOGO DE ÍTEMS • AGRUPADOS POR CATEGORÍA</span>
                     <span id="pending-changes-badge" class="hidden px-2 py-0.5 rounded bg-[#1da1f2]/20 border border-[#1da1f2]/50 text-[#69c3fa] font-mono text-[10px]">
                         0 cambio(s) pendiente(s)
                     </span>
@@ -364,8 +395,8 @@
                     <button type="button" onclick="toggleAllCategories()" class="text-[11px] font-mono text-[#1da1f2] hover:text-[#69c3fa] transition">
                         Expandir / Colapsar todo
                     </button>
-                    <p class="hidden sm:block text-[11px] text-[#9aa2ad]">
-                        Clic en fila para resaltar • Arrastra <code class="text-[#1da1f2]">.iam/.ipt</code> o <code class="text-white">.stl</code> • Clic en foto para ampliar
+                    <p id="table-section-hint" class="hidden sm:block text-[11px] text-[#9aa2ad]">
+                        Clic en fila para resaltar • Arrastra imágenes • Clic en foto para ampliar
                     </p>
                 </div>
             </div>
@@ -373,15 +404,7 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
                     <thead>
-                        <tr class="bg-[#22262b] border-b border-[#383e47] text-[11px] font-semibold text-[#c2c8d1]">
-                            <th class="py-2.5 px-3">Código</th>
-                            <th class="py-2.5 px-3">Descripción</th>
-                            <th class="py-2.5 px-3">Categoría</th>
-                            <th class="py-2.5 px-3">Inconsistencias</th>
-                            <th class="py-2.5 px-3 text-center">Etiquetas</th>
-                            <th class="py-2.5 px-3 text-center">Contenido</th>
-                            <th id="admin-actions-th" class="hidden py-2.5 px-3 text-right">Admin</th>
-                        </tr>
+                        <tr id="parts-table-thead-row" class="bg-[#22262b] border-b border-[#383e47] text-[11px] font-semibold text-[#c2c8d1]"></tr>
                     </thead>
                     <tbody id="parts-table-body" class="divide-y divide-[#30363e] text-xs"></tbody>
                 </table>
@@ -400,7 +423,7 @@
                 <span id="footer-status-dot" class="w-2 h-2 rounded-full bg-amber-400"></span>
                 <span id="footer-status-text">Base de Datos: <strong>Conectando...</strong></span>
             </div>
-            <div>Agrupado por categoría • Sin duplicados por código • Soporta .iam, .ipt, .stl e imágenes</div>
+            <div id="footer-right-caption">Agrupado por categoría • Sin duplicados por código • CSV en MAYÚSCULA • Soporta imágenes</div>
         </div>
     </footer>
 
@@ -481,7 +504,7 @@
         </div>
     </div>
 
-    <!-- Modal Conflicto de Archivos Existentes (Agregar / Reemplazar / Cancelar) -->
+    <!-- Modal Conflicto de Archivos Existentes -->
     <div id="file-conflict-modal" class="fixed inset-0 z-50 hidden bg-black/75 flex items-center justify-center p-4">
         <div class="bg-[#272b30] border border-[#3a4048] rounded shadow-2xl w-full max-w-md p-5 text-center">
             <div class="w-9 h-9 rounded bg-amber-500/15 border border-amber-400/50 text-amber-300 flex items-center justify-center mx-auto mb-2.5 text-sm">
@@ -834,19 +857,40 @@
         const DEFAULT_SUPABASE_URL = 'https://sksanvauywgjxmxujicl.supabase.co';
         const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_2fuRdNLrO24nN5HA6e8lmw_v6IYVleX';
 
-        const DB_NAME = 'DataWaves_CAD_IPT_STL_DB_V18';
+        const DB_NAME = 'DataWaves_CAD_IPT_STL_DB_V19';
         const DB_VERSION = 1;
-        const STORE_NAME = 'parts';
+        const HARDWARE_STORE = 'parts';
+        const CATALOG_STORE = 'catalog_items';
         const ADMIN_SECRET = 'datawaves';
-        const SB_TABLE = 'cad_parts';
+        const SB_HARDWARE_TABLE = 'cad_parts';
+        const SB_CATALOG_TABLE = 'cad_catalog';
         const SB_BUCKET = 'cad-models';
 
-        const ACCEPTED_UPLOAD_EXTENSIONS = '.ipt,.iam,.stl,.png,.jpg,.jpeg,.webp,.gif,.bmp';
+        const CATALOG_CSV_HEADERS = [
+            'DESCRIPCION',
+            'CATEGORIA',
+            'UBICACION',
+            'IMAGEN',
+            'NOTAS',
+            'CODIGO',
+            'ESTADO',
+            'RUTA'
+        ];
+
+        const ACCEPTED_HARDWARE_EXTENSIONS = '.ipt,.iam,.stl,.png,.jpg,.jpeg,.webp,.gif,.bmp';
+        const ACCEPTED_IMAGE_EXTENSIONS = '.png,.jpg,.jpeg,.webp,.gif,.bmp';
 
         let supabaseClient = null;
         let isSupabaseConnected = false;
         let db = null;
-        let allParts = [];
+
+        // Pantalla principal = CATÁLOGO ('catalog'); alterna con FERRETERÍA ('hardware')
+        let currentModule = 'catalog';
+
+        let hardwareParts = [];
+        let catalogItems = [];
+        let allParts = []; // Referencia al arreglo activo del módulo en curso
+
         let baselineSnapshots = new Map();
         let draftRows = [];
         let pendingRowFiles = {};
@@ -872,6 +916,22 @@
         const blobUrlCache = new Map();
         const imageObjectUrlCache = new Map();
         const inFlightDownloads = new Map();
+
+        function isCatalogModule() {
+            return currentModule === 'catalog';
+        }
+
+        function getActiveStoreName() {
+            return isCatalogModule() ? CATALOG_STORE : HARDWARE_STORE;
+        }
+
+        function getActiveSupabaseTable() {
+            return isCatalogModule() ? SB_CATALOG_TABLE : SB_HARDWARE_TABLE;
+        }
+
+        function getAcceptedExtensionsForModule() {
+            return isCatalogModule() ? ACCEPTED_IMAGE_EXTENSIONS : ACCEPTED_HARDWARE_EXTENSIONS;
+        }
 
         /* =========================================================================
            MENÚ LATERAL DERECHO E INTELIGENCIA ARTIFICIAL DE FERRETERÍA CAD
@@ -964,10 +1024,10 @@
         function renderAiWelcomeMessage() {
             appendAiAssistantBubble(`
                 <p class="text-[#e2e6ec] leading-relaxed">
-                    Hola. Puedo analizar las <strong>etiquetas</strong>, descripciones, categorías, inconsistencias y archivos CAD del catálogo para responder consultas técnicas.
+                    Hola. Puedo analizar las <strong>etiquetas</strong>, descripciones, categorías, ubicaciones, estados, rutas y notas tanto de <strong>Catálogo</strong> como de <strong>Ferretería</strong>.
                 </p>
                 <p class="text-[#9aa2ad] mt-1.5 text-[11px]">
-                    Probá preguntando por ejemplo: <span class="text-[#69c3fa] font-mono">"¿Qué herraje se usa en el rack 400 x 800?"</span>
+                    Ejemplo: <span class="text-[#69c3fa] font-mono">"¿Qué herraje se usa en el rack 400 x 800?"</span>
                 </p>
             `);
         }
@@ -1074,7 +1134,7 @@
                 subjectTokens.push(tok);
             }
 
-            const asksInconsistencies = /\b(inconsistencia|inconsistencias|observacion|observaciones|error|errores|problema|problemas)\b/.test(norm);
+            const asksInconsistencies = /\b(inconsistencia|inconsistencias|observacion|observaciones|nota|notas|error|errores|problema|problemas)\b/.test(norm);
 
             return {
                 rawQuestion,
@@ -1088,25 +1148,34 @@
 
         function getBestModelRouteForPart(part) {
             if (!part) return null;
+            if ((part.ruta || '').trim()) {
+                return part.ruta.trim();
+            }
             const iptFiles = getActiveSlotFiles(part, 'ipt');
             const stlFiles = getActiveSlotFiles(part, 'stl');
 
             const iamFile = iptFiles.find(f => isIamFileName(f.name));
             if (iamFile) {
-                return iamFile.storagePath ? `${iamFile.name} (Ruta: ${iamFile.storagePath})` : iamFile.name;
+                return iamFile.storagePath ? `${iamFile.name} (${iamFile.storagePath})` : iamFile.name;
             }
             if (iptFiles.length > 0) {
                 const f = iptFiles[0];
-                return f.storagePath ? `${f.name} (Ruta: ${f.storagePath})` : f.name;
+                return f.storagePath ? `${f.name} (${f.storagePath})` : f.name;
             }
             if (stlFiles.length > 0) {
                 const f = stlFiles[0];
-                return f.storagePath ? `${f.name} (Ruta: ${f.storagePath})` : f.name;
+                return f.storagePath ? `${f.name} (${f.storagePath})` : f.name;
             }
             if ((part.codigo || '').trim()) {
                 return `Código ${part.codigo.trim()}${part.categoria ? ' [' + part.categoria.trim() + ']' : ''}`;
             }
             return null;
+        }
+
+        function getCombinedAiCorpusParts() {
+            const catTagged = (catalogItems || []).map(p => ({ ...p, _aiModule: 'catalog' }));
+            const hwTagged = (hardwareParts || []).map(p => ({ ...p, _aiModule: 'hardware' }));
+            return [...catTagged, ...hwTagged];
         }
 
         function evaluatePartAgainstIntent(part, intent) {
@@ -1116,12 +1185,15 @@
             const normDesc = normalizeText(part.descripcion || '');
             const normCat = normalizeText(part.categoria || '');
             const normObs = normalizeText(part.observaciones || '');
+            const normLoc = normalizeText(part.ubicacion || '');
+            const normStatus = normalizeText(part.estado || '');
+            const normRoute = normalizeText(part.ruta || '');
             const iptNames = getActiveSlotFiles(part, 'ipt').map(f => f.name);
             const stlNames = getActiveSlotFiles(part, 'stl').map(f => f.name);
             const imgNames = getActiveSlotFiles(part, 'img').map(f => f.name);
             const allFileNamesNorm = normalizeText([...iptNames, ...stlNames, ...imgNames].join(' '));
 
-            const fullCorpus = `${normCode} ${normDesc} ${normCat} ${normObs} ${normTags.map(t => t.norm).join(' ')} ${allFileNamesNorm}`;
+            const fullCorpus = `${normCode} ${normDesc} ${normCat} ${normObs} ${normLoc} ${normStatus} ${normRoute} ${normTags.map(t => t.norm).join(' ')} ${allFileNamesNorm}`;
 
             let subjectScore = 0;
             let matchedSubjectTokens = 0;
@@ -1132,8 +1204,10 @@
                 if (normDesc.includes(tok)) { subjectScore += 12; hit = true; }
                 if (normCat.includes(tok)) { subjectScore += 8; hit = true; }
                 if (normTags.some(t => t.norm.includes(tok))) { subjectScore += 13; hit = true; }
+                if (normRoute.includes(tok)) { subjectScore += 9; hit = true; }
+                if (normLoc.includes(tok)) { subjectScore += 7; hit = true; }
                 if (allFileNamesNorm.includes(tok)) { subjectScore += 9; hit = true; }
-                if (normObs.includes(tok)) { subjectScore += 5; hit = true; }
+                if (normObs.includes(tok)) { subjectScore += 6; hit = true; }
                 if (hit) matchedSubjectTokens++;
             }
 
@@ -1179,10 +1253,16 @@
                         domainScore += 8;
                     }
                     if (rx.test(normObs)) {
-                        if (!matchedDomainFields.includes(`Inconsistencia: "${part.observaciones}"`)) {
-                            matchedDomainFields.push(`Inconsistencia: "${part.observaciones}"`);
+                        if (!matchedDomainFields.includes(`Notas: "${part.observaciones}"`)) {
+                            matchedDomainFields.push(`Notas: "${part.observaciones}"`);
                         }
                         domainScore += 7;
+                    }
+                    if (rx.test(normRoute)) {
+                        if (!matchedDomainFields.includes(`Ruta: "${part.ruta}"`)) {
+                            matchedDomainFields.push(`Ruta: "${part.ruta}"`);
+                        }
+                        domainScore += 8;
                     }
                     if (rx.test(allFileNamesNorm)) {
                         const matchingFile = [...iptNames, ...stlNames].find(fn => rx.test(normalizeText(fn)));
@@ -1216,8 +1296,11 @@
             };
         }
 
-        function filterCatalogFromAi(queryStr) {
+        async function filterCatalogFromAi(queryStr, targetModule = null) {
             if (!queryStr) return;
+            if (targetModule && targetModule !== currentModule) {
+                await switchActiveModule(targetModule);
+            }
             clearMultiSearch();
             const inp1 = document.getElementById('multi-search-1');
             if (inp1) {
@@ -1239,16 +1322,18 @@
 
         function buildAiPartActionButtonsHTML(part) {
             const safeCode = escapeHTML(part.codigo || '');
-            const hasStl = partHasSlotFile(part, 'stl');
+            const mod = part._aiModule || currentModule;
+            const modLabel = mod === 'catalog' ? 'Catálogo' : 'Ferretería';
+            const hasStl = mod === 'hardware' && partHasSlotFile(part, 'stl');
             return `
                 <div class="flex flex-wrap items-center gap-1.5 mt-2 pt-1.5 border-t border-[#323944]">
                     ${part.codigo ? `
                         <button
                             type="button"
-                            onclick="filterCatalogFromAi('${safeCode.replace(/'/g, "\\'")}')"
+                            onclick="filterCatalogFromAi('${safeCode.replace(/'/g, "\\'")}', '${mod}')"
                             class="px-2 py-0.5 rounded bg-[#1da1f2]/20 hover:bg-[#1da1f2]/35 border border-[#1da1f2]/60 text-[#7cccfb] font-mono text-[10px] transition flex items-center gap-1"
                         >
-                            <i class="fa-solid fa-magnifying-glass"></i> Ver en tabla (${safeCode})
+                            <i class="fa-solid fa-magnifying-glass"></i> ${modLabel}: ${safeCode}
                         </button>
                     ` : ''}
                     ${hasStl ? `
@@ -1267,7 +1352,8 @@
         function processAiUserQuestion(question) {
             appendAiUserBubble(question);
 
-            if (!allParts || allParts.length === 0) {
+            const corpusParts = getCombinedAiCorpusParts();
+            if (!corpusParts || corpusParts.length === 0) {
                 appendAiAssistantBubble(`
                     <p class="text-amber-300">
                         El ítem que estás buscando no tiene los datos necesarios para responderte, buscalo en el modelo y cargalos acá para la próxima vez.
@@ -1278,11 +1364,10 @@
 
             const intent = parseAiQueryIntent(question);
 
-            // Caso especial: consulta sobre inconsistencias
             if (intent.asksInconsistencies && intent.subjectTokens.length === 0 && intent.dimensions.length === 0 && intent.activeDomainGroups.length === 0) {
-                const withObs = allParts.filter(partHasObservations);
+                const withObs = corpusParts.filter(partHasObservations);
                 if (withObs.length === 0) {
-                    appendAiAssistantBubble(`<p>Actualmente no hay ítems registrados con inconsistencias en el catálogo.</p>`);
+                    appendAiAssistantBubble(`<p>Actualmente no hay ítems registrados con notas o inconsistencias.</p>`);
                     return;
                 }
                 const listHTML = withObs.slice(0, 8).map(p => `
@@ -1293,24 +1378,20 @@
                     </div>
                 `).join('');
                 appendAiAssistantBubble(`
-                    <p class="mb-2">Encontré <strong>${withObs.length}</strong> ítem(s) con inconsistencias cargadas:</p>
+                    <p class="mb-2">Encontré <strong>${withObs.length}</strong> ítem(s) con notas o inconsistencias:</p>
                     <div class="space-y-2">${listHTML}</div>
                 `);
                 return;
             }
 
-            const evaluations = allParts.map(p => evaluatePartAgainstIntent(p, intent));
+            const evaluations = corpusParts.map(p => evaluatePartAgainstIntent(p, intent));
 
-            // 1. Si la pregunta menciona un dominio (ej: "herraje") Y un modelo/objeto (ej: "rack 400 x 800")
             if (intent.activeDomainGroups.length > 0 && intent.hasSubjectRequirement) {
                 const subjectCandidates = evaluations
                     .filter(ev => ev.subjectMatched)
                     .sort((a, b) => (b.subjectScore + b.dimensionScore) - (a.subjectScore + a.dimensionScore));
 
-                // Verificar si el modelo encontrado tiene datos/etiquetas de herraje en sí mismo o en ítems asociados
                 const candidatesWithDomain = subjectCandidates.filter(ev => ev.hasDomainAnswer);
-
-                // También buscar ítems de herrajes sueltos que hagan referencia al modelo en sus etiquetas o descripción
                 const crossReferencedItems = evaluations.filter(ev =>
                     !subjectCandidates.some(sc => sc.part.id === ev.part.id) &&
                     ev.hasDomainAnswer &&
@@ -1350,13 +1431,12 @@
                     }).join('');
 
                     appendAiAssistantBubble(`
-                        <p class="mb-2 text-[#e6eef8]">Según las <strong>etiquetas</strong> y datos registrados en el catálogo, encontré esta información relacionada:</p>
+                        <p class="mb-2 text-[#e6eef8]">Verificando las <strong>etiquetas</strong> y datos registrados, encontré esta información relacionada:</p>
                         <div class="space-y-2">${cardsHTML}</div>
                     `);
                     return;
                 }
 
-                // Se encontró el modelo (ej. rack 400 x 800), pero NO tiene etiquetas ni datos de herrajes cargados
                 if (subjectCandidates.length > 0) {
                     const bestModel = subjectCandidates[0].part;
                     const modelRoute = getBestModelRouteForPart(bestModel);
@@ -1371,7 +1451,6 @@
                     return;
                 }
 
-                // No se encontró ni siquiera el modelo en el catálogo
                 appendAiAssistantBubble(`
                     <p class="text-amber-200 leading-relaxed">
                         El ítem que estás buscando no tiene los datos necesarios para responderte, buscalo en el modelo y cargalos acá para la próxima vez.
@@ -1380,7 +1459,6 @@
                 return;
             }
 
-            // 2. Búsqueda general por coincidencia en etiquetas, código, descripción o categoría
             const generalMatches = evaluations
                 .filter(ev => ev.totalScore > 0)
                 .sort((a, b) => b.totalScore - a.totalScore);
@@ -1395,26 +1473,16 @@
             }
 
             const topMatches = generalMatches.slice(0, 5);
-            const hasUsefulInfo = topMatches.some(ev => ev.tags.length > 0 || (ev.part.descripcion || '').trim() !== '' || ev.hasDomainAnswer);
-
-            if (!hasUsefulInfo) {
-                const bestModel = topMatches[0].part;
-                const modelRoute = getBestModelRouteForPart(bestModel);
-                const routeText = modelRoute ? ` <strong>${escapeHTML(modelRoute)}</strong>` : '';
-                appendAiAssistantBubble(`
-                    <p class="text-amber-200 leading-relaxed">
-                        El ítem que estás buscando no tiene los datos necesarios para responderte, buscalo en el modelo:${routeText} y cargalos acá para la próxima vez.
-                    </p>
-                    ${buildAiPartActionButtonsHTML(bestModel)}
-                `);
-                return;
-            }
-
             const cardsHTML = topMatches.map(ev => {
                 const p = ev.part;
                 const tagsHTML = ev.tags.length > 0
                     ? `<div class="flex flex-wrap gap-1 mt-1.5">${ev.tags.map(t => `<span class="px-1.5 py-0.5 rounded bg-[#15181c] border border-[#343b46] text-[#cfe0f5] font-mono text-[10px]">${escapeHTML(t)}</span>`).join('')}</div>`
-                    : `<p class="text-[10px] text-[#7c8591] italic mt-1">Sin etiquetas cargadas</p>`;
+                    : '';
+
+                const metaLines = [];
+                if (p.ubicacion) metaLines.push(`Ubicación: ${p.ubicacion}`);
+                if (p.estado) metaLines.push(`Estado: ${p.estado}`);
+                if (p.ruta) metaLines.push(`Ruta: ${p.ruta}`);
 
                 return `
                     <div class="p-2.5 rounded bg-[#1a1e24] border border-[#363e4a]">
@@ -1423,7 +1491,8 @@
                             ${p.categoria ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-[#252a32] text-[#9aa2ad]">${escapeHTML(p.categoria)}</span>` : ''}
                         </div>
                         ${p.descripcion ? `<p class="text-xs text-white font-medium mt-0.5">${escapeHTML(p.descripcion)}</p>` : ''}
-                        ${p.observaciones ? `<p class="text-[11px] text-red-300 mt-1">Inconsistencia: ${escapeHTML(p.observaciones)}</p>` : ''}
+                        ${metaLines.length > 0 ? `<p class="text-[10px] font-mono text-[#9aa2ad] mt-1">${escapeHTML(metaLines.join(' • '))}</p>` : ''}
+                        ${p.observaciones ? `<p class="text-[11px] text-red-300 mt-1">Notas: ${escapeHTML(p.observaciones)}</p>` : ''}
                         ${tagsHTML}
                         ${buildAiPartActionButtonsHTML(p)}
                     </div>
@@ -1431,13 +1500,118 @@
             }).join('');
 
             appendAiAssistantBubble(`
-                <p class="mb-2">Esto es lo que encontré en el catálogo relacionado con tu consulta:</p>
+                <p class="mb-2">Esto es lo que encontré relacionado con tu consulta:</p>
                 <div class="space-y-2">${cardsHTML}</div>
             `);
         }
 
         /* =========================================================================
-           LÓGICA ORIGINAL DE CATÁLOGO, SUPABASE, ETIQUETAS Y ARCHIVOS CAD
+           CAMBIO DE MÓDULO (CATÁLOGO PRINCIPAL <-> FERRETERÍA PARALELA)
+           ========================================================================= */
+
+        function updateModuleChromeUI() {
+            const isCat = isCatalogModule();
+            document.title = isCat
+                ? 'DATAWAVES - CATÁLOGO'
+                : 'DATAWAVES - FERRETERÍA CAD (.IAM / .IPT / .STL)';
+            document.getElementById('app-header-title').textContent = isCat
+                ? 'DATAWAVES - CATÁLOGO'
+                : 'DATAWAVES - FERRETERÍA CAD (.IAM / .IPT / .STL)';
+
+            document.getElementById('sidebar-current-module-badge').textContent = isCat
+                ? 'ACTIVO: CATÁLOGO'
+                : 'ACTIVO: FERRETERÍA';
+            document.getElementById('sidebar-switch-label').textContent = isCat
+                ? 'FERRETERÍA'
+                : 'CATÁLOGO';
+            document.getElementById('sidebar-switch-icon').className = isCat
+                ? 'fa-solid fa-wrench text-[#1da1f2]'
+                : 'fa-solid fa-book-open text-[#1da1f2]';
+
+            document.getElementById('filter-obs-label').textContent = isCat ? 'Con notas' : 'Con inconsistencias';
+            document.getElementById('quick-create-title').textContent = isCat
+                ? 'CARGA RÁPIDA / CSV / EXCEL CATÁLOGO (SIN DUPLICADOS POR CÓDIGO)'
+                : 'CARGA RÁPIDA / EXCEL (SIN DUPLICADOS POR CÓDIGO)';
+
+            const exportCsvBtn = document.getElementById('export-csv-btn');
+            if (exportCsvBtn) {
+                exportCsvBtn.classList.toggle('hidden', !isCat);
+                exportCsvBtn.classList.toggle('flex', isCat);
+            }
+
+            document.getElementById('table-section-title').textContent = isCat
+                ? 'CATÁLOGO • DESCRIPCION - CATEGORIA - UBICACION - IMAGEN - NOTAS - CODIGO - ESTADO - RUTA'
+                : 'COMPONENTES CAD (.IAM / .IPT / .STL / IMÁGENES) • AGRUPADOS POR CATEGORÍA';
+
+            document.getElementById('table-section-hint').textContent = isCat
+                ? 'Clic en fila para resaltar • Arrastra imágenes • Clic en foto para ampliar'
+                : 'Clic en fila para resaltar • Arrastra .iam/.ipt o .stl • Clic en foto para ampliar';
+
+            document.getElementById('footer-right-caption').textContent = isCat
+                ? 'Agrupado por categoría • Sin duplicados por código • CSV en MAYÚSCULA • Soporta imágenes'
+                : 'Agrupado por categoría • Sin duplicados por código • Soporta .iam, .ipt, .stl e imágenes';
+
+            const theadRow = document.getElementById('parts-table-thead-row');
+            if (isCat) {
+                theadRow.innerHTML = `
+                    <th class="py-2.5 px-3">DESCRIPCION</th>
+                    <th class="py-2.5 px-3">CATEGORIA</th>
+                    <th class="py-2.5 px-3">UBICACION</th>
+                    <th class="py-2.5 px-3 text-center">IMAGEN</th>
+                    <th class="py-2.5 px-3">NOTAS</th>
+                    <th class="py-2.5 px-3">CODIGO</th>
+                    <th class="py-2.5 px-3">ESTADO</th>
+                    <th class="py-2.5 px-3">RUTA</th>
+                    <th id="admin-actions-th" class="${isAdmin ? '' : 'hidden '}py-2.5 px-3 text-right">ADMIN</th>
+                `;
+            } else {
+                theadRow.innerHTML = `
+                    <th class="py-2.5 px-3">Código</th>
+                    <th class="py-2.5 px-3">Descripción</th>
+                    <th class="py-2.5 px-3">Categoría</th>
+                    <th class="py-2.5 px-3">Inconsistencias</th>
+                    <th class="py-2.5 px-3 text-center">Etiquetas</th>
+                    <th class="py-2.5 px-3 text-center">Contenido</th>
+                    <th id="admin-actions-th" class="${isAdmin ? '' : 'hidden '}py-2.5 px-3 text-right">Admin</th>
+                `;
+            }
+        }
+
+        async function switchActiveModule(targetModule) {
+            if (targetModule === currentModule) return;
+            currentModule = targetModule;
+            allParts = isCatalogModule() ? catalogItems : hardwareParts;
+            selectedPartId = null;
+            expandedInfoPartId = null;
+            activeTagInputRowId = null;
+            onlyWithObservations = false;
+            collapsedCategories.clear();
+            pendingRowFiles = {};
+            pendingRowTags = {};
+            draftRows = [{
+                id: 'draft-' + Date.now(),
+                codigo: '',
+                descripcion: '',
+                categoria: '',
+                ubicacion: '',
+                observaciones: '',
+                estado: '',
+                ruta: '',
+                tags: []
+            }];
+
+            captureBaselineSnapshots(allParts);
+            for (const p of allParts) buildSearchIndex(p);
+            updateModuleChromeUI();
+            if (isAdmin) renderDraftRows();
+            renderPartsTable();
+            updatePendingChangesIndicator();
+            closeAiSidebar();
+            showToast(isCatalogModule() ? 'Módulo CATÁLOGO activo.' : 'Módulo FERRETERÍA activo.');
+        }
+
+        /* =========================================================================
+           ETIQUETAS, ARCHIVOS E IMÁGENES
            ========================================================================= */
 
         function normalizeTagsList(tags) {
@@ -1776,6 +1950,7 @@
         }
 
         function getFileExtensionSlot(fileName) {
+            if (isCatalogModule()) return 'img';
             const lower = String(fileName || '').trim().toLowerCase();
             if (lower.endsWith('.stl')) return 'stl';
             if (isImageFileName(lower)) return 'img';
@@ -1831,7 +2006,7 @@
             });
         }
 
-        function parseFilesFromRow(row, localMatch) {
+        function parseHardwareRow(row, localMatch) {
             const localIptMap = new Map(normalizeFileArray(localMatch && (localMatch.iptFiles || localMatch.iptFile)).map(f => [f.storagePath || f.name, f]));
             const localStlMap = new Map(normalizeFileArray(localMatch && (localMatch.stlFiles || localMatch.stlFile)).map(f => [f.storagePath || f.name, f]));
             const localImgMap = new Map(normalizeFileArray(localMatch && localMatch.imgFiles).map(f => [f.storagePath || f.name, f]));
@@ -1905,6 +2080,35 @@
             }
 
             return { iptFiles, stlFiles, imgFiles, tags };
+        }
+
+        function parseCatalogRow(row, localMatch) {
+            const localImgMap = new Map(normalizeFileArray(localMatch && localMatch.imgFiles).map(f => [f.storagePath || f.name, f]));
+            let imgFiles = normalizeFileArray(localMatch && localMatch.imgFiles);
+            let tags = normalizeTagsList(localMatch && localMatch.tags);
+
+            if (row.imagen_json && typeof row.imagen_json === 'string' && row.imagen_json.startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(row.imagen_json);
+                    if (Array.isArray(parsed.tags)) {
+                        tags = normalizeTagsList(parsed.tags);
+                    }
+                    if (Array.isArray(parsed.imgList)) {
+                        imgFiles = parsed.imgList.filter(x => x && x.path).map(x => {
+                            const lm = localImgMap.get(x.path) || localImgMap.get(x.name);
+                            return {
+                                name: x.name || `${row.codigo || 'item'}.jpg`,
+                                size: x.size || 0,
+                                type: getImageMimeType(x.name),
+                                storagePath: x.path,
+                                data: lm ? lm.data : null
+                            };
+                        });
+                    }
+                } catch (_) {}
+            }
+
+            return { imgFiles, tags };
         }
 
         function getSlotFieldName(slot) {
@@ -2008,7 +2212,7 @@
             if (fileEntry.data) return fileEntry;
 
             if (fileEntry.storagePath && isSupabaseConnected && supabaseClient) {
-                const flightKey = `${part.id}:${slot}:${fileEntry.storagePath}`;
+                const flightKey = `${currentModule}:${part.id}:${slot}:${fileEntry.storagePath}`;
                 if (inFlightDownloads.has(flightKey)) {
                     return await inFlightDownloads.get(flightKey);
                 }
@@ -2020,7 +2224,7 @@
                         if (!error && data) {
                             fileEntry.data = await data.arrayBuffer();
                             fileEntry.size = fileEntry.size || fileEntry.data.byteLength;
-                            await savePartToDB(part).catch(() => {});
+                            await savePartToDB(part, getActiveStoreName()).catch(() => {});
                             return fileEntry;
                         }
                     } finally {
@@ -2218,7 +2422,7 @@
             if (titleEl) {
                 titleEl.textContent = part.codigo
                     ? `${part.codigo}${part.descripcion ? ' — ' + part.descripcion : ''}`
-                    : 'Imágenes';
+                    : (part.descripcion || 'Imágenes');
             }
 
             renderImageViewerContent();
@@ -2412,7 +2616,10 @@
                 part.codigo,
                 part.descripcion,
                 part.categoria,
+                part.ubicacion,
                 part.observaciones,
+                part.estado,
+                part.ruta,
                 tagNames,
                 iptNames,
                 stlNames,
@@ -2427,7 +2634,10 @@
                     codigo: (p.codigo || '').trim(),
                     descripcion: (p.descripcion || '').trim(),
                     categoria: (p.categoria || '').trim(),
+                    ubicacion: (p.ubicacion || '').trim(),
                     observaciones: (p.observaciones || '').trim(),
+                    estado: (p.estado || '').trim(),
+                    ruta: (p.ruta || '').trim(),
                     tags: normalizeTagsList(p.tags)
                 });
             }
@@ -2450,22 +2660,24 @@
         function isPartRowChangedInDOM(part) {
             if (hasPendingFileDelta(part.id) || hasPendingTagDelta(part.id)) return true;
             const snap = baselineSnapshots.get(part.id);
-            const codeEl = document.getElementById(`edit-code-${part.id}`);
-            const descEl = document.getElementById(`edit-desc-${part.id}`);
-            const catEl = document.getElementById(`edit-cat-${part.id}`);
-            const obsEl = document.getElementById(`edit-obs-${part.id}`);
 
-            const curCode = codeEl ? codeEl.value.trim() : (part.codigo || '').trim();
-            const curDesc = descEl ? descEl.value.trim() : (part.descripcion || '').trim();
-            const curCat = catEl ? catEl.value.trim() : (part.categoria || '').trim();
-            const curObs = obsEl ? obsEl.value.trim() : (part.observaciones || '').trim();
+            const curCode = (document.getElementById(`edit-code-${part.id}`)?.value ?? part.codigo ?? '').trim();
+            const curDesc = (document.getElementById(`edit-desc-${part.id}`)?.value ?? part.descripcion ?? '').trim();
+            const curCat = (document.getElementById(`edit-cat-${part.id}`)?.value ?? part.categoria ?? '').trim();
+            const curObs = (document.getElementById(`edit-obs-${part.id}`)?.value ?? part.observaciones ?? '').trim();
+            const curLoc = (document.getElementById(`edit-loc-${part.id}`)?.value ?? part.ubicacion ?? '').trim();
+            const curStatus = (document.getElementById(`edit-status-${part.id}`)?.value ?? part.estado ?? '').trim();
+            const curRoute = (document.getElementById(`edit-route-${part.id}`)?.value ?? part.ruta ?? '').trim();
 
             if (!snap) return true;
             return (
                 curCode !== snap.codigo ||
                 curDesc !== snap.descripcion ||
                 curCat !== snap.categoria ||
+                curLoc !== snap.ubicacion ||
                 curObs !== snap.observaciones ||
+                curStatus !== snap.estado ||
+                curRoute !== snap.ruta ||
                 !areTagListsEqual(getActivePartTags(part), snap.tags)
             );
         }
@@ -2481,12 +2693,14 @@
                 if (isPartRowChangedInDOM(p)) count++;
             }
             for (const r of draftRows) {
-                const c = document.getElementById(`draft-code-${r.id}`);
-                const d = document.getElementById(`draft-desc-${r.id}`);
-                const cat = document.getElementById(`draft-cat-${r.id}`);
-                const obs = document.getElementById(`draft-obs-${r.id}`);
-                const hasVal = [c ? c.value : r.codigo, d ? d.value : r.descripcion, cat ? cat.value : r.categoria, obs ? obs.value : r.observaciones]
-                    .some(x => String(x || '').trim() !== '');
+                const c = document.getElementById(`draft-code-${r.id}`)?.value ?? r.codigo;
+                const d = document.getElementById(`draft-desc-${r.id}`)?.value ?? r.descripcion;
+                const cat = document.getElementById(`draft-cat-${r.id}`)?.value ?? r.categoria;
+                const loc = document.getElementById(`draft-loc-${r.id}`)?.value ?? r.ubicacion;
+                const obs = document.getElementById(`draft-obs-${r.id}`)?.value ?? r.observaciones;
+                const st = document.getElementById(`draft-status-${r.id}`)?.value ?? r.estado;
+                const rt = document.getElementById(`draft-route-${r.id}`)?.value ?? r.ruta;
+                const hasVal = [c, d, cat, loc, obs, st, rt].some(x => String(x || '').trim() !== '');
                 const pFiles = pendingRowFiles[r.id];
                 const hasDraftFiles = Boolean(
                     (pFiles && pFiles.ipt && pFiles.ipt.length > 0) ||
@@ -2524,7 +2738,7 @@
                 : 'Base de Datos: <strong>Sin conectar</strong>';
         }
 
-        async function deduplicatePartsByCode(partsList) {
+        async function deduplicatePartsByCode(partsList, moduleType = currentModule) {
             const seenByCode = new Map();
             const uniqueParts = [];
             const duplicatesToDelete = [];
@@ -2537,6 +2751,9 @@
                 s += normalizeTagsList(p.tags).length * 5;
                 if ((p.descripcion || '').trim()) s += 2;
                 if ((p.categoria || '').trim()) s += 2;
+                if ((p.ubicacion || '').trim()) s += 2;
+                if ((p.estado || '').trim()) s += 1;
+                if ((p.ruta || '').trim()) s += 1;
                 if ((p.observaciones || '').trim()) s += 1;
                 return s;
             };
@@ -2559,6 +2776,9 @@
                 }
             }
 
+            const storeName = moduleType === 'catalog' ? CATALOG_STORE : HARDWARE_STORE;
+            const sbTable = moduleType === 'catalog' ? SB_CATALOG_TABLE : SB_HARDWARE_TABLE;
+
             if (duplicatesToDelete.length > 0 && isSupabaseConnected && supabaseClient) {
                 await Promise.all(duplicatesToDelete.map(async dup => {
                     const paths = [
@@ -2569,16 +2789,20 @@
                     if (paths.length > 0) {
                         await supabaseClient.storage.from(SB_BUCKET).remove(paths);
                     }
-                    await supabaseClient.from(SB_TABLE).delete().eq('id', dup.id);
-                    await deletePartFromDB(dup.id);
+                    await supabaseClient.from(sbTable).delete().eq('id', dup.id);
+                    await deletePartFromDB(dup.id, storeName);
                 }));
             }
 
             return { uniqueParts, removedCount: duplicatesToDelete.length };
         }
 
-        async function fetchAllParts(skipDedup = false) {
-            const localParts = await getAllPartsFromDB();
+        async function fetchModuleParts(moduleType, skipDedup = false) {
+            const isCat = moduleType === 'catalog';
+            const storeName = isCat ? CATALOG_STORE : HARDWARE_STORE;
+            const sbTable = isCat ? SB_CATALOG_TABLE : SB_HARDWARE_TABLE;
+
+            const localParts = await getAllPartsFromDB(storeName);
             const localMap = new Map(localParts.map(x => [x.id, x]));
             let rawParts = localParts.map(lp => ({
                 ...lp,
@@ -2589,47 +2813,70 @@
             }));
 
             if (isSupabaseConnected && supabaseClient) {
-                const { data, error } = await supabaseClient.from(SB_TABLE).select('*').order('codigo', { ascending: true });
+                const { data, error } = await supabaseClient.from(sbTable).select('*').order('codigo', { ascending: true });
                 if (error) {
-                    showToast('Error leyendo Supabase: ' + error.message);
+                    if (!isCat) showToast('Error leyendo Supabase: ' + error.message);
                 } else {
                     rawParts = (data || []).map(row => {
                         const localMatch = localMap.get(row.id);
-                        const { iptFiles, stlFiles, imgFiles, tags } = parseFilesFromRow(row, localMatch);
-                        return {
-                            id: row.id,
-                            codigo: row.codigo || '',
-                            descripcion: row.descripcion || '',
-                            categoria: row.categoria || '',
-                            observaciones: row.observaciones || '',
-                            date: row.updated_at || '',
-                            iptFiles,
-                            stlFiles,
-                            imgFiles,
-                            tags
-                        };
+                        if (isCat) {
+                            const { imgFiles, tags } = parseCatalogRow(row, localMatch);
+                            return {
+                                id: row.id,
+                                descripcion: row.descripcion || '',
+                                categoria: row.categoria || '',
+                                ubicacion: row.ubicacion || '',
+                                imgFiles,
+                                observaciones: row.notas || row.observaciones || '',
+                                codigo: row.codigo || '',
+                                estado: row.estado || '',
+                                ruta: row.ruta || '',
+                                date: row.updated_at || '',
+                                iptFiles: [],
+                                stlFiles: [],
+                                tags
+                            };
+                        } else {
+                            const { iptFiles, stlFiles, imgFiles, tags } = parseHardwareRow(row, localMatch);
+                            return {
+                                id: row.id,
+                                codigo: row.codigo || '',
+                                descripcion: row.descripcion || '',
+                                categoria: row.categoria || '',
+                                ubicacion: '',
+                                observaciones: row.observaciones || '',
+                                estado: '',
+                                ruta: '',
+                                date: row.updated_at || '',
+                                iptFiles,
+                                stlFiles,
+                                imgFiles,
+                                tags
+                            };
+                        }
                     });
                 }
             }
 
             let finalParts = rawParts;
             if (!skipDedup) {
-                const { uniqueParts, removedCount } = await deduplicatePartsByCode(rawParts);
+                const { uniqueParts, removedCount } = await deduplicatePartsByCode(rawParts, moduleType);
                 finalParts = uniqueParts;
                 if (removedCount > 0) showToast(`Se eliminaron ${removedCount} duplicado(s) existente(s) por código.`);
             }
 
             for (const p of finalParts) {
                 buildSearchIndex(p);
-                if (p.iptFiles.length > 0 && p.iptFiles.every(f => f.data)) buildOrRefreshSlotBlobUrl(p, 'ipt');
-                if (p.stlFiles.length > 0 && p.stlFiles.every(f => f.data)) buildOrRefreshSlotBlobUrl(p, 'stl');
+                if (!isCat) {
+                    if (p.iptFiles.length > 0 && p.iptFiles.every(f => f.data)) buildOrRefreshSlotBlobUrl(p, 'ipt');
+                    if (p.stlFiles.length > 0 && p.stlFiles.every(f => f.data)) buildOrRefreshSlotBlobUrl(p, 'stl');
+                }
             }
-            captureBaselineSnapshots(finalParts);
-            warmUpAllPartBlobs(finalParts);
+            if (!isCat) warmUpAllPartBlobs(finalParts);
             return finalParts;
         }
 
-        async function syncSlotFilesToStorage(partId, slot, currentFiles, targetFiles, pathsToRemove) {
+        async function syncSlotFilesToStorage(partId, slot, currentFiles, targetFiles, pathsToRemove, prefixFolder = '') {
             const keptPaths = new Set(targetFiles.filter(f => f.storagePath).map(f => f.storagePath));
             for (const oldF of currentFiles) {
                 if (oldF.storagePath && !keptPaths.has(oldF.storagePath)) {
@@ -2638,13 +2885,14 @@
             }
 
             const finalFiles = [];
+            const folderPrefix = prefixFolder ? `${prefixFolder}/` : '';
             for (let i = 0; i < targetFiles.length; i++) {
                 const entry = targetFiles[i];
                 if (entry.storagePath && !entry._isNewUpload) {
                     finalFiles.push(entry);
                 } else if (entry.data) {
                     const cleanName = entry.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-                    const newPath = `${partId}/${slot}_${Date.now()}_${i}_${cleanName}`;
+                    const newPath = `${folderPrefix}${partId}/${slot}_${Date.now()}_${i}_${cleanName}`;
                     const contentType = slot === 'img'
                         ? (entry.type || getImageMimeType(entry.name))
                         : 'application/octet-stream';
@@ -2667,11 +2915,16 @@
             return finalFiles;
         }
 
-        async function persistPartRecord(partObj, slotChanges = {}) {
+        async function persistPartRecord(partObj, slotChanges = {}, moduleType = currentModule) {
             if (!isSupabaseConnected || !supabaseClient) {
                 showToast('No hay conexión activa con Supabase.');
                 return false;
             }
+
+            const isCat = moduleType === 'catalog';
+            const storeName = isCat ? CATALOG_STORE : HARDWARE_STORE;
+            const sbTable = isCat ? SB_CATALOG_TABLE : SB_HARDWARE_TABLE;
+            const folderPrefix = isCat ? 'catalog' : '';
 
             const pathsToRemove = [];
             partObj.iptFiles = normalizeFileArray(partObj.iptFiles || partObj.iptFile);
@@ -2681,56 +2934,85 @@
 
             if (Object.prototype.hasOwnProperty.call(slotChanges, 'ipt')) {
                 const targetList = Array.isArray(slotChanges.ipt) ? slotChanges.ipt : [];
-                partObj.iptFiles = await syncSlotFilesToStorage(partObj.id, 'ipt', partObj.iptFiles, targetList, pathsToRemove);
+                partObj.iptFiles = await syncSlotFilesToStorage(partObj.id, 'ipt', partObj.iptFiles, targetList, pathsToRemove, folderPrefix);
                 invalidatePartSlotBlobUrl(partObj.id, 'ipt');
             }
 
             if (Object.prototype.hasOwnProperty.call(slotChanges, 'stl')) {
                 const targetList = Array.isArray(slotChanges.stl) ? slotChanges.stl : [];
-                partObj.stlFiles = await syncSlotFilesToStorage(partObj.id, 'stl', partObj.stlFiles, targetList, pathsToRemove);
+                partObj.stlFiles = await syncSlotFilesToStorage(partObj.id, 'stl', partObj.stlFiles, targetList, pathsToRemove, folderPrefix);
                 invalidatePartSlotBlobUrl(partObj.id, 'stl');
             }
 
             if (Object.prototype.hasOwnProperty.call(slotChanges, 'img')) {
                 const targetList = Array.isArray(slotChanges.img) ? slotChanges.img : [];
-                partObj.imgFiles = await syncSlotFilesToStorage(partObj.id, 'img', partObj.imgFiles, targetList, pathsToRemove);
+                partObj.imgFiles = await syncSlotFilesToStorage(partObj.id, 'img', partObj.imgFiles, targetList, pathsToRemove, folderPrefix);
             }
 
             if (pathsToRemove.length > 0) {
                 await supabaseClient.storage.from(SB_BUCKET).remove(pathsToRemove).catch(() => {});
             }
 
-            const primaryCad = partObj.iptFiles.find(f => isIamFileName(f.name)) || partObj.iptFiles[0] || null;
-            const totalCadSize = partObj.iptFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+            const updatedAt = new Date().toISOString().split('T')[0];
 
-            const { error: dbError } = await supabaseClient.from(SB_TABLE).upsert({
-                id: partObj.id,
-                codigo: partObj.codigo,
-                descripcion: partObj.descripcion,
-                categoria: partObj.categoria,
-                observaciones: partObj.observaciones,
-                ipt_name: primaryCad ? primaryCad.name : null,
-                ipt_size: totalCadSize,
-                ipt_path: primaryCad ? primaryCad.storagePath : null,
-                preset_shape: serializeFilesMetadata(partObj.iptFiles, partObj.stlFiles, partObj.imgFiles, partObj.tags),
-                updated_at: new Date().toISOString().split('T')[0]
-            });
-            if (dbError) throw new Error('Base de datos: ' + dbError.message);
+            if (isCat) {
+                const imgMeta = (partObj.imgFiles || []).filter(f => f && f.storagePath).map(f => ({
+                    name: f.name || '',
+                    size: f.size || 0,
+                    path: f.storagePath
+                }));
+                const { error: dbError } = await supabaseClient.from(sbTable).upsert({
+                    id: partObj.id,
+                    descripcion: partObj.descripcion || '',
+                    categoria: partObj.categoria || '',
+                    ubicacion: partObj.ubicacion || '',
+                    imagen_json: JSON.stringify({ v: 1, imgList: imgMeta, tags: partObj.tags }),
+                    notas: partObj.observaciones || '',
+                    codigo: partObj.codigo || '',
+                    estado: partObj.estado || '',
+                    ruta: partObj.ruta || '',
+                    updated_at: updatedAt
+                });
+                if (dbError) throw new Error('Base de datos Catálogo: ' + dbError.message);
+            } else {
+                const primaryCad = partObj.iptFiles.find(f => isIamFileName(f.name)) || partObj.iptFiles[0] || null;
+                const totalCadSize = partObj.iptFiles.reduce((acc, f) => acc + (f.size || 0), 0);
+
+                const { error: dbError } = await supabaseClient.from(sbTable).upsert({
+                    id: partObj.id,
+                    codigo: partObj.codigo,
+                    descripcion: partObj.descripcion,
+                    categoria: partObj.categoria,
+                    observaciones: partObj.observaciones,
+                    ipt_name: primaryCad ? primaryCad.name : null,
+                    ipt_size: totalCadSize,
+                    ipt_path: primaryCad ? primaryCad.storagePath : null,
+                    preset_shape: serializeFilesMetadata(partObj.iptFiles, partObj.stlFiles, partObj.imgFiles, partObj.tags),
+                    updated_at: updatedAt
+                });
+                if (dbError) throw new Error('Base de datos: ' + dbError.message);
+            }
 
             delete partObj.iptFile;
             delete partObj.stlFile;
             buildSearchIndex(partObj);
-            if (partObj.iptFiles.length > 0 && partObj.iptFiles.every(f => f.data)) await buildOrRefreshSlotBlobUrl(partObj, 'ipt');
-            if (partObj.stlFiles.length > 0 && partObj.stlFiles.every(f => f.data)) await buildOrRefreshSlotBlobUrl(partObj, 'stl');
-            await savePartToDB(partObj);
+            if (!isCat) {
+                if (partObj.iptFiles.length > 0 && partObj.iptFiles.every(f => f.data)) await buildOrRefreshSlotBlobUrl(partObj, 'ipt');
+                if (partObj.stlFiles.length > 0 && partObj.stlFiles.every(f => f.data)) await buildOrRefreshSlotBlobUrl(partObj, 'stl');
+            }
+            await savePartToDB(partObj, storeName);
             return true;
         }
 
-        async function removePartRecord(part) {
+        async function removePartRecord(part, moduleType = currentModule) {
             if (!isSupabaseConnected || !supabaseClient) {
                 showToast('No hay conexión activa con Supabase.');
                 return false;
             }
+            const isCat = moduleType === 'catalog';
+            const storeName = isCat ? CATALOG_STORE : HARDWARE_STORE;
+            const sbTable = isCat ? SB_CATALOG_TABLE : SB_HARDWARE_TABLE;
+
             const paths = [
                 ...normalizeFileArray(part.iptFiles).map(f => f.storagePath),
                 ...normalizeFileArray(part.stlFiles).map(f => f.storagePath),
@@ -2739,10 +3021,10 @@
             if (paths.length > 0) {
                 await supabaseClient.storage.from(SB_BUCKET).remove(paths);
             }
-            const { error } = await supabaseClient.from(SB_TABLE).delete().eq('id', part.id);
+            const { error } = await supabaseClient.from(sbTable).delete().eq('id', part.id);
             if (error) throw new Error(error.message);
             invalidatePartSlotBlobUrl(part.id);
-            await deletePartFromDB(part.id);
+            await deletePartFromDB(part.id, storeName);
             return true;
         }
 
@@ -2750,8 +3032,12 @@
             return new Promise((resolve, reject) => {
                 const req = indexedDB.open(DB_NAME, DB_VERSION);
                 req.onupgradeneeded = e => {
-                    if (!e.target.result.objectStoreNames.contains(STORE_NAME)) {
-                        e.target.result.createObjectStore(STORE_NAME, { keyPath: 'id' });
+                    const d = e.target.result;
+                    if (!d.objectStoreNames.contains(HARDWARE_STORE)) {
+                        d.createObjectStore(HARDWARE_STORE, { keyPath: 'id' });
+                    }
+                    if (!d.objectStoreNames.contains(CATALOG_STORE)) {
+                        d.createObjectStore(CATALOG_STORE, { keyPath: 'id' });
                     }
                 };
                 req.onsuccess = e => { db = e.target.result; resolve(db); };
@@ -2759,25 +3045,25 @@
             });
         }
 
-        function getAllPartsFromDB() {
+        function getAllPartsFromDB(storeName = getActiveStoreName()) {
             return new Promise((resolve, reject) => {
-                const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).getAll();
+                const req = db.transaction(storeName, 'readonly').objectStore(storeName).getAll();
                 req.onsuccess = () => resolve(req.result || []);
                 req.onerror = () => reject(req.error);
             });
         }
 
-        function savePartToDB(part) {
+        function savePartToDB(part, storeName = getActiveStoreName()) {
             return new Promise((resolve, reject) => {
-                const req = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).put(part);
+                const req = db.transaction(storeName, 'readwrite').objectStore(storeName).put(part);
                 req.onsuccess = () => resolve(true);
                 req.onerror = () => reject(req.error);
             });
         }
 
-        function deletePartFromDB(id) {
+        function deletePartFromDB(id, storeName = getActiveStoreName()) {
             return new Promise((resolve, reject) => {
-                const req = db.transaction(STORE_NAME, 'readwrite').objectStore(STORE_NAME).delete(id);
+                const req = db.transaction(storeName, 'readwrite').objectStore(storeName).delete(id);
                 req.onsuccess = () => resolve(true);
                 req.onerror = () => reject(req.error);
             });
@@ -2801,6 +3087,51 @@
             return keys;
         }
 
+        /* =========================================================================
+           EXPORTACIÓN .CSV EN MAYÚSCULA E IMPORTACIÓN CSV / EXCEL
+           ========================================================================= */
+
+        function escapeCsvCellUpper(val) {
+            const str = String(val ?? '').toUpperCase().replace(/\r?\n/g, ' ').trim();
+            if (/[",\n;]/.test(str)) {
+                return `"${str.replace(/"/g, '""')}"`;
+            }
+            return str;
+        }
+
+        function exportCatalogCSV() {
+            if (!isCatalogModule()) return;
+            const lines = [CATALOG_CSV_HEADERS.join(',')];
+            const sorted = [...catalogItems].sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+
+            for (const item of sorted) {
+                const imgNames = getActiveSlotFiles(item, 'img').map(f => f.name).join(' | ');
+                const rowCells = [
+                    item.descripcion || '',
+                    item.categoria || '',
+                    item.ubicacion || '',
+                    imgNames,
+                    item.observaciones || '',
+                    item.codigo || '',
+                    item.estado || '',
+                    item.ruta || ''
+                ].map(escapeCsvCellUpper);
+                lines.push(rowCells.join(','));
+            }
+
+            const csvContent = '\uFEFF' + lines.join('\r\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'CATALOGO_MAYUSCULA.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showToast('CSV exportado en MAYÚSCULA.');
+        }
+
         async function handleExcelImport(event) {
             const file = event.target.files && event.target.files[0];
             if (!file || !window.XLSX) return;
@@ -2809,19 +3140,11 @@
                 const workbook = XLSX.read(buf, { type: 'array' });
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
                 const rows = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
-                if (!rows || rows.length === 0) { showToast('El archivo Excel está vacío.'); event.target.value = ''; return; }
+                if (!rows || rows.length === 0) { showToast('El archivo está vacío.'); event.target.value = ''; return; }
 
                 syncDraftInputsFromDOM();
                 const firstRowNorm = rows[0].map(c => normalizeText(String(c || '').trim()));
-                let codeIdx = firstRowNorm.findIndex(h => ['codigo', 'código', 'code', 'cod'].includes(h));
-                let descIdx = firstRowNorm.findIndex(h => ['descripcion', 'descripción', 'description', 'desc'].includes(h));
-                let catIdx = firstRowNorm.findIndex(h => ['categoria', 'categoría', 'category', 'cat'].includes(h));
-                let obsIdx = firstRowNorm.findIndex(h => ['inconsistencias', 'inconsistencia', 'observaciones', 'observacion', 'observación', 'notes'].includes(h));
 
-                const hasHeader = codeIdx !== -1 || descIdx !== -1 || catIdx !== -1;
-                if (!hasHeader) { codeIdx = 0; descIdx = 1; catIdx = 2; obsIdx = 3; }
-
-                const startRow = hasHeader ? 1 : 0;
                 draftRows = draftRows.filter(r => {
                     const p = pendingRowFiles[r.id];
                     const hasFiles = Boolean(
@@ -2830,30 +3153,81 @@
                         (p && p.img && p.img.length > 0)
                     );
                     const hasTags = getDraftTags(r.id).length > 0;
-                    return (r.codigo || r.descripcion || r.categoria || r.observaciones || '').trim() !== '' || hasFiles || hasTags;
+                    return [r.codigo, r.descripcion, r.categoria, r.ubicacion, r.observaciones, r.estado, r.ruta]
+                        .some(x => String(x || '').trim() !== '') || hasFiles || hasTags;
                 });
 
                 const knownCodes = getKnownCodeKeys();
                 let added = 0, skippedDuplicates = 0;
 
-                for (let i = startRow; i < rows.length; i++) {
-                    const r = rows[i];
-                    if (!Array.isArray(r)) continue;
-                    const codigo = codeIdx >= 0 ? String(r[codeIdx] ?? '').trim() : '';
-                    const descripcion = descIdx >= 0 ? String(r[descIdx] ?? '').trim() : '';
-                    const categoria = catIdx >= 0 ? String(r[catIdx] ?? '').trim() : '';
-                    const observaciones = obsIdx >= 0 ? String(r[obsIdx] ?? '').trim() : '';
-                    if (!codigo && !descripcion && !categoria && !observaciones) continue;
+                if (isCatalogModule()) {
+                    // Orden esperado: DESCRIPCION - CATEGORIA - UBICACION - IMAGEN - NOTAS - CODIGO - ESTADO - RUTA
+                    let descIdx = firstRowNorm.findIndex(h => ['descripcion', 'descripción', 'description', 'desc'].includes(h));
+                    let catIdx = firstRowNorm.findIndex(h => ['categoria', 'categoría', 'category', 'cat'].includes(h));
+                    let locIdx = firstRowNorm.findIndex(h => ['ubicacion', 'ubicación', 'location', 'ub'].includes(h));
+                    let obsIdx = firstRowNorm.findIndex(h => ['notas', 'nota', 'observaciones', 'observacion', 'inconsistencias'].includes(h));
+                    let codeIdx = firstRowNorm.findIndex(h => ['codigo', 'código', 'code', 'cod'].includes(h));
+                    let statusIdx = firstRowNorm.findIndex(h => ['estado', 'status'].includes(h));
+                    let routeIdx = firstRowNorm.findIndex(h => ['ruta', 'route', 'path', 'modelo'].includes(h));
 
-                    const codeKey = normalizeCodeKey(codigo);
-                    if (codeKey && knownCodes.has(codeKey)) { skippedDuplicates++; continue; }
-                    if (codeKey) knownCodes.add(codeKey);
+                    const hasHeader = [descIdx, catIdx, locIdx, obsIdx, codeIdx, statusIdx, routeIdx].some(idx => idx !== -1);
+                    if (!hasHeader) {
+                        descIdx = 0; catIdx = 1; locIdx = 2; obsIdx = 4; codeIdx = 5; statusIdx = 6; routeIdx = 7;
+                    }
 
-                    draftRows.push({
-                        id: 'draft-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2, 5),
-                        codigo, descripcion, categoria, observaciones, tags: []
-                    });
-                    added++;
+                    const startRow = hasHeader ? 1 : 0;
+                    for (let i = startRow; i < rows.length; i++) {
+                        const r = rows[i];
+                        if (!Array.isArray(r)) continue;
+                        const descripcion = descIdx >= 0 ? String(r[descIdx] ?? '').trim() : '';
+                        const categoria = catIdx >= 0 ? String(r[catIdx] ?? '').trim() : '';
+                        const ubicacion = locIdx >= 0 ? String(r[locIdx] ?? '').trim() : '';
+                        const observaciones = obsIdx >= 0 ? String(r[obsIdx] ?? '').trim() : '';
+                        const codigo = codeIdx >= 0 ? String(r[codeIdx] ?? '').trim() : '';
+                        const estado = statusIdx >= 0 ? String(r[statusIdx] ?? '').trim() : '';
+                        const ruta = routeIdx >= 0 ? String(r[routeIdx] ?? '').trim() : '';
+
+                        if (!codigo && !descripcion && !categoria && !ubicacion && !observaciones && !estado && !ruta) continue;
+
+                        const codeKey = normalizeCodeKey(codigo);
+                        if (codeKey && knownCodes.has(codeKey)) { skippedDuplicates++; continue; }
+                        if (codeKey) knownCodes.add(codeKey);
+
+                        draftRows.push({
+                            id: 'draft-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2, 5),
+                            codigo, descripcion, categoria, ubicacion, observaciones, estado, ruta, tags: []
+                        });
+                        added++;
+                    }
+                } else {
+                    let codeIdx = firstRowNorm.findIndex(h => ['codigo', 'código', 'code', 'cod'].includes(h));
+                    let descIdx = firstRowNorm.findIndex(h => ['descripcion', 'descripción', 'description', 'desc'].includes(h));
+                    let catIdx = firstRowNorm.findIndex(h => ['categoria', 'categoría', 'category', 'cat'].includes(h));
+                    let obsIdx = firstRowNorm.findIndex(h => ['inconsistencias', 'inconsistencia', 'observaciones', 'observacion', 'observación', 'notes'].includes(h));
+
+                    const hasHeader = codeIdx !== -1 || descIdx !== -1 || catIdx !== -1;
+                    if (!hasHeader) { codeIdx = 0; descIdx = 1; catIdx = 2; obsIdx = 3; }
+
+                    const startRow = hasHeader ? 1 : 0;
+                    for (let i = startRow; i < rows.length; i++) {
+                        const r = rows[i];
+                        if (!Array.isArray(r)) continue;
+                        const codigo = codeIdx >= 0 ? String(r[codeIdx] ?? '').trim() : '';
+                        const descripcion = descIdx >= 0 ? String(r[descIdx] ?? '').trim() : '';
+                        const categoria = catIdx >= 0 ? String(r[catIdx] ?? '').trim() : '';
+                        const observaciones = obsIdx >= 0 ? String(r[obsIdx] ?? '').trim() : '';
+                        if (!codigo && !descripcion && !categoria && !observaciones) continue;
+
+                        const codeKey = normalizeCodeKey(codigo);
+                        if (codeKey && knownCodes.has(codeKey)) { skippedDuplicates++; continue; }
+                        if (codeKey) knownCodes.add(codeKey);
+
+                        draftRows.push({
+                            id: 'draft-' + Date.now() + '-' + i + '-' + Math.random().toString(36).slice(2, 5),
+                            codigo, descripcion, categoria, ubicacion: '', observaciones, estado: '', ruta: '', tags: []
+                        });
+                        added++;
+                    }
                 }
 
                 if (draftRows.length === 0) addDraftRow();
@@ -2863,7 +3237,7 @@
                     ? `Agregados ${added}; ${skippedDuplicates} duplicado(s) omitido(s) por código.`
                     : `Se cargaron ${added} fila(s). Pulsa Guardar para confirmar.`);
             } catch (err) {
-                showToast('Error al leer Excel: ' + err.message);
+                showToast('Error al leer archivo: ' + err.message);
             }
             event.target.value = '';
         }
@@ -2874,7 +3248,10 @@
                 codigo: document.getElementById(`draft-code-${row.id}`)?.value ?? row.codigo,
                 descripcion: document.getElementById(`draft-desc-${row.id}`)?.value ?? row.descripcion,
                 categoria: document.getElementById(`draft-cat-${row.id}`)?.value ?? row.categoria,
+                ubicacion: document.getElementById(`draft-loc-${row.id}`)?.value ?? row.ubicacion,
                 observaciones: document.getElementById(`draft-obs-${row.id}`)?.value ?? row.observaciones,
+                estado: document.getElementById(`draft-status-${row.id}`)?.value ?? row.estado,
+                ruta: document.getElementById(`draft-route-${row.id}`)?.value ?? row.ruta,
                 tags: getDraftTags(row.id)
             }));
         }
@@ -2893,7 +3270,10 @@
                 codigo: prefill.codigo || '',
                 descripcion: prefill.descripcion || '',
                 categoria: prefill.categoria || '',
+                ubicacion: prefill.ubicacion || '',
                 observaciones: prefill.observaciones || '',
+                estado: prefill.estado || '',
+                ruta: prefill.ruta || '',
                 tags: normalizeTagsList(prefill.tags)
             });
             renderDraftRows();
@@ -2925,6 +3305,10 @@
             const bySlot = { ipt: [], stl: [], img: [] };
             for (const file of files) {
                 const slot = getFileExtensionSlot(file.name);
+                if (isCatalogModule() && !isImageFileName(file.name)) {
+                    showToast(`En Catálogo solo se admiten imágenes (${file.name}).`);
+                    continue;
+                }
                 const buf = await file.arrayBuffer();
                 bySlot[slot].push({
                     name: file.name,
@@ -2965,7 +3349,7 @@
             }
 
             const row = draftRows.find(r => r.id === rowId);
-            if (row && !row.codigo) {
+            if (row && !row.codigo && !isCatalogModule()) {
                 const preferred = files.find(f => isIamFileName(f.name)) || files[0];
                 const candidate = preferred.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
                 const key = normalizeCodeKey(candidate);
@@ -3033,45 +3417,85 @@
             const container = document.getElementById('draft-rows-container');
             if (!container) return;
             const frag = document.createDocumentFragment();
+            const acceptAttr = getAcceptedExtensionsForModule();
 
             draftRows.forEach((row, idx) => {
                 const pFiles = pendingRowFiles[row.id] || {};
                 const chipsHTML = buildDraftFilesChipsHTML(row.id, pFiles);
-                const tagsHTML = buildAdminTagsEditorHTML(row.id, getDraftTags(row.id), true);
-
                 const div = document.createElement('div');
-                div.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center bg-[#1e2227] border border-[#353b42] rounded p-2';
-                div.innerHTML = `
-                    <div class="lg:col-span-2">
-                        <input type="text" id="draft-code-${row.id}" value="${escapeHTML(row.codigo)}" placeholder="Código #${idx + 1}" oninput="updatePendingChangesIndicator()" class="inline-cell-input font-mono text-[#1da1f2]">
-                    </div>
-                    <div class="lg:col-span-2">
-                        <input type="text" id="draft-desc-${row.id}" value="${escapeHTML(row.descripcion)}" placeholder="Descripción" oninput="updatePendingChangesIndicator()" class="inline-cell-input">
-                    </div>
-                    <div class="lg:col-span-2">
-                        <input type="text" id="draft-cat-${row.id}" value="${escapeHTML(row.categoria)}" placeholder="Categoría" oninput="updatePendingChangesIndicator()" class="inline-cell-input">
-                    </div>
-                    <div class="lg:col-span-2">
-                        <input type="text" id="draft-obs-${row.id}" value="${escapeHTML(row.observaciones)}" placeholder="Inconsistencias" oninput="updatePendingChangesIndicator()" class="inline-cell-input text-[#aeb6c2]">
-                    </div>
-                    <div class="lg:col-span-2 flex items-center">
-                        ${tagsHTML}
-                    </div>
-                    <div class="lg:col-span-2 flex items-center justify-between gap-2">
-                        <div class="flex flex-wrap items-center gap-1.5 min-w-0 flex-1 py-0.5">
-                            ${chipsHTML || '<span class="text-[11px] text-[#6d7682] font-mono">Sin archivos</span>'}
+
+                if (isCatalogModule()) {
+                    div.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center bg-[#1e2227] border border-[#353b42] rounded p-2';
+                    div.innerHTML = `
+                        <div class="lg:col-span-2">
+                            <input type="text" id="draft-desc-${row.id}" value="${escapeHTML(row.descripcion)}" placeholder="DESCRIPCION #${idx + 1}" oninput="updatePendingChangesIndicator()" class="inline-cell-input">
                         </div>
-                        <div class="flex items-center gap-1.5 shrink-0">
-                            <label title="Cargar .iam, .ipt, .stl o imágenes" class="cursor-pointer w-7 h-7 rounded bg-[#272b30] hover:bg-[#32373e] border border-[#3e454e] hover:border-[#1da1f2] text-[#1da1f2] flex items-center justify-center transition">
-                                <i class="fa-solid fa-plus text-xs"></i>
-                                <input type="file" accept="${ACCEPTED_UPLOAD_EXTENSIONS}" multiple class="hidden" onchange="onDraftFilesSelected('${row.id}', event)">
+                        <div class="lg:col-span-1">
+                            <input type="text" id="draft-cat-${row.id}" value="${escapeHTML(row.categoria)}" placeholder="CATEGORIA" oninput="updatePendingChangesIndicator()" class="inline-cell-input">
+                        </div>
+                        <div class="lg:col-span-1">
+                            <input type="text" id="draft-loc-${row.id}" value="${escapeHTML(row.ubicacion)}" placeholder="UBICACION" oninput="updatePendingChangesIndicator()" class="inline-cell-input">
+                        </div>
+                        <div class="lg:col-span-2 flex items-center justify-between gap-1.5 bg-[#181c20] border border-[#2f353e] rounded px-2 py-1">
+                            <div class="flex flex-wrap items-center gap-1 min-w-0 flex-1">
+                                ${chipsHTML || '<span class="text-[10px] text-[#6d7682] font-mono">Sin imagen</span>'}
+                            </div>
+                            <label title="Cargar imagen" class="cursor-pointer w-6 h-6 rounded bg-[#272b30] hover:bg-[#32373e] border border-[#3e454e] hover:border-[#1da1f2] text-emerald-400 flex items-center justify-center shrink-0 transition">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                                <input type="file" accept="${acceptAttr}" multiple class="hidden" onchange="onDraftFilesSelected('${row.id}', event)">
                             </label>
-                            <button type="button" onclick="removeDraftRow('${row.id}')" title="Quitar fila" class="w-7 h-7 rounded bg-[#272b30] hover:bg-red-950/60 border border-[#3e454e] text-[#9aa2ad] hover:text-red-400 text-xs flex items-center justify-center transition">
+                        </div>
+                        <div class="lg:col-span-2">
+                            <input type="text" id="draft-obs-${row.id}" value="${escapeHTML(row.observaciones)}" placeholder="NOTAS" oninput="updatePendingChangesIndicator()" class="inline-cell-input text-[#aeb6c2]">
+                        </div>
+                        <div class="lg:col-span-1">
+                            <input type="text" id="draft-code-${row.id}" value="${escapeHTML(row.codigo)}" placeholder="CODIGO" oninput="updatePendingChangesIndicator()" class="inline-cell-input font-mono text-[#1da1f2]">
+                        </div>
+                        <div class="lg:col-span-1">
+                            <input type="text" id="draft-status-${row.id}" value="${escapeHTML(row.estado)}" placeholder="ESTADO" oninput="updatePendingChangesIndicator()" class="inline-cell-input">
+                        </div>
+                        <div class="lg:col-span-2 flex items-center gap-1.5">
+                            <input type="text" id="draft-route-${row.id}" value="${escapeHTML(row.ruta)}" placeholder="RUTA" oninput="updatePendingChangesIndicator()" class="inline-cell-input font-mono text-[#cfd5de]">
+                            <button type="button" onclick="removeDraftRow('${row.id}')" title="Quitar fila" class="w-7 h-7 rounded bg-[#272b30] hover:bg-red-950/60 border border-[#3e454e] text-[#9aa2ad] hover:text-red-400 text-xs flex items-center justify-center shrink-0 transition">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                         </div>
-                    </div>
-                `;
+                    `;
+                } else {
+                    const tagsHTML = buildAdminTagsEditorHTML(row.id, getDraftTags(row.id), true);
+                    div.className = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center bg-[#1e2227] border border-[#353b42] rounded p-2';
+                    div.innerHTML = `
+                        <div class="lg:col-span-2">
+                            <input type="text" id="draft-code-${row.id}" value="${escapeHTML(row.codigo)}" placeholder="Código #${idx + 1}" oninput="updatePendingChangesIndicator()" class="inline-cell-input font-mono text-[#1da1f2]">
+                        </div>
+                        <div class="lg:col-span-2">
+                            <input type="text" id="draft-desc-${row.id}" value="${escapeHTML(row.descripcion)}" placeholder="Descripción" oninput="updatePendingChangesIndicator()" class="inline-cell-input">
+                        </div>
+                        <div class="lg:col-span-2">
+                            <input type="text" id="draft-cat-${row.id}" value="${escapeHTML(row.categoria)}" placeholder="Categoría" oninput="updatePendingChangesIndicator()" class="inline-cell-input">
+                        </div>
+                        <div class="lg:col-span-2">
+                            <input type="text" id="draft-obs-${row.id}" value="${escapeHTML(row.observaciones)}" placeholder="Inconsistencias" oninput="updatePendingChangesIndicator()" class="inline-cell-input text-[#aeb6c2]">
+                        </div>
+                        <div class="lg:col-span-2 flex items-center">
+                            ${tagsHTML}
+                        </div>
+                        <div class="lg:col-span-2 flex items-center justify-between gap-2">
+                            <div class="flex flex-wrap items-center gap-1.5 min-w-0 flex-1 py-0.5">
+                                ${chipsHTML || '<span class="text-[11px] text-[#6d7682] font-mono">Sin archivos</span>'}
+                            </div>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <label title="Cargar .iam, .ipt, .stl o imágenes" class="cursor-pointer w-7 h-7 rounded bg-[#272b30] hover:bg-[#32373e] border border-[#3e454e] hover:border-[#1da1f2] text-[#1da1f2] flex items-center justify-center transition">
+                                    <i class="fa-solid fa-plus text-xs"></i>
+                                    <input type="file" accept="${acceptAttr}" multiple class="hidden" onchange="onDraftFilesSelected('${row.id}', event)">
+                                </label>
+                                <button type="button" onclick="removeDraftRow('${row.id}')" title="Quitar fila" class="w-7 h-7 rounded bg-[#272b30] hover:bg-red-950/60 border border-[#3e454e] text-[#9aa2ad] hover:text-red-400 text-xs flex items-center justify-center transition">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
                 frag.appendChild(div);
             });
 
@@ -3083,14 +3507,17 @@
             const part = allParts.find(p => p.id === partId);
             if (!part || !files || files.length === 0) return;
 
+            const bySlot = await readSelectedFilesIntoSlots(files);
+            const totalIncoming = (bySlot.ipt || []).length + (bySlot.stl || []).length + (bySlot.img || []).length;
+            if (totalIncoming === 0) return;
+
             const existingTotal = getPartTotalActiveFilesCount(part);
             let mode = 'add';
             if (existingTotal > 0) {
-                mode = await askFileConflictResolution(part.codigo || part.id, files.length);
+                mode = await askFileConflictResolution(part.codigo || part.descripcion || part.id, totalIncoming);
                 if (mode === 'cancel') return;
             }
 
-            const bySlot = await readSelectedFilesIntoSlots(files);
             if (!pendingRowFiles[partId]) pendingRowFiles[partId] = {};
 
             for (const slot of ['ipt', 'stl', 'img']) {
@@ -3108,7 +3535,7 @@
 
             renderPartsTable();
             updatePendingChangesIndicator();
-            showToast(`${files.length} archivo(s) ${mode === 'replace' ? 'reemplazado(s)' : 'agregado(s)'}. Pulsa Guardar para confirmar.`);
+            showToast(`${totalIncoming} archivo(s) ${mode === 'replace' ? 'reemplazado(s)' : 'agregado(s)'}. Pulsa Guardar para confirmar.`);
         }
 
         async function onTableRowFilesSelected(partId, event) {
@@ -3181,14 +3608,7 @@
                 for (const part of allParts) {
                     if (!isPartRowChangedInDOM(part)) continue;
 
-                    const codeEl = document.getElementById(`edit-code-${part.id}`);
-                    const descEl = document.getElementById(`edit-desc-${part.id}`);
-                    const catEl = document.getElementById(`edit-cat-${part.id}`);
-                    const obsEl = document.getElementById(`edit-obs-${part.id}`);
-                    const slotChanges = pendingRowFiles[part.id] ? { ...pendingRowFiles[part.id] } : {};
-                    const nextTags = getActivePartTags(part);
-
-                    const nextCode = codeEl ? codeEl.value.trim() : part.codigo;
+                    const nextCode = (document.getElementById(`edit-code-${part.id}`)?.value ?? part.codigo ?? '').trim();
                     const nextKey = normalizeCodeKey(nextCode);
 
                     const duplicateInTable = Array.from(existingCodesMap.entries()).some(
@@ -3196,12 +3616,18 @@
                     );
                     if (duplicateInTable) { skippedDuplicates++; continue; }
 
+                    const slotChanges = pendingRowFiles[part.id] ? { ...pendingRowFiles[part.id] } : {};
+                    const nextTags = getActivePartTags(part);
+
                     const updatedPart = {
                         ...part,
                         codigo: nextCode,
-                        descripcion: descEl ? descEl.value.trim() : part.descripcion,
-                        categoria: catEl ? catEl.value.trim() : part.categoria,
-                        observaciones: obsEl ? obsEl.value.trim() : part.observaciones,
+                        descripcion: (document.getElementById(`edit-desc-${part.id}`)?.value ?? part.descripcion ?? '').trim(),
+                        categoria: (document.getElementById(`edit-cat-${part.id}`)?.value ?? part.categoria ?? '').trim(),
+                        ubicacion: (document.getElementById(`edit-loc-${part.id}`)?.value ?? part.ubicacion ?? '').trim(),
+                        observaciones: (document.getElementById(`edit-obs-${part.id}`)?.value ?? part.observaciones ?? '').trim(),
+                        estado: (document.getElementById(`edit-status-${part.id}`)?.value ?? part.estado ?? '').trim(),
+                        ruta: (document.getElementById(`edit-route-${part.id}`)?.value ?? part.ruta ?? '').trim(),
                         tags: nextTags,
                         date: new Date().toISOString().split('T')[0]
                     };
@@ -3217,7 +3643,10 @@
                     const codigo = (row.codigo || '').trim();
                     const descripcion = (row.descripcion || '').trim();
                     const categoria = (row.categoria || '').trim();
+                    const ubicacion = (row.ubicacion || '').trim();
                     const observaciones = (row.observaciones || '').trim();
+                    const estado = (row.estado || '').trim();
+                    const ruta = (row.ruta || '').trim();
                     const rowTags = getDraftTags(row.id);
                     const slotChanges = pendingRowFiles[row.id] ? { ...pendingRowFiles[row.id] } : {};
                     const hasFiles = Boolean(
@@ -3226,7 +3655,7 @@
                         (slotChanges.img && slotChanges.img.length > 0)
                     );
 
-                    const hasAnyData = Boolean(codigo || descripcion || categoria || observaciones || hasFiles || rowTags.length > 0);
+                    const hasAnyData = Boolean(codigo || descripcion || categoria || ubicacion || observaciones || estado || ruta || hasFiles || rowTags.length > 0);
                     if (!hasAnyData) { remainingDrafts.push(row); continue; }
 
                     const codeKey = normalizeCodeKey(codigo);
@@ -3239,11 +3668,14 @@
                     if (codeKey) activeCodeKeys.add(codeKey);
 
                     const newPart = {
-                        id: 'part-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-                        codigo: codigo || 'PENDIENTE',
-                        descripcion: descripcion || '',
-                        categoria: categoria || '',
+                        id: (isCatalogModule() ? 'cat-' : 'part-') + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+                        codigo: codigo || (isCatalogModule() ? '' : 'PENDIENTE'),
+                        descripcion,
+                        categoria,
+                        ubicacion,
                         observaciones,
+                        estado,
+                        ruta,
                         tags: rowTags,
                         date: new Date().toISOString().split('T')[0],
                         iptFiles: [],
@@ -3256,7 +3688,7 @@
 
                 await Promise.all([
                     ...changedPartsToPersist.map(async item => {
-                        const ok = await persistPartRecord(item.updatedPart, item.slotChanges);
+                        const ok = await persistPartRecord(item.updatedPart, item.slotChanges, currentModule);
                         if (ok) {
                             delete pendingRowFiles[item.partId];
                             delete pendingRowTags[item.partId];
@@ -3266,13 +3698,16 @@
                                 codigo: item.updatedPart.codigo.trim(),
                                 descripcion: item.updatedPart.descripcion.trim(),
                                 categoria: item.updatedPart.categoria.trim(),
+                                ubicacion: (item.updatedPart.ubicacion || '').trim(),
                                 observaciones: item.updatedPart.observaciones.trim(),
+                                estado: (item.updatedPart.estado || '').trim(),
+                                ruta: (item.updatedPart.ruta || '').trim(),
                                 tags: normalizeTagsList(item.updatedPart.tags)
                             });
                         }
                     }),
                     ...newDraftsToPersist.map(async item => {
-                        const ok = await persistPartRecord(item.newPart, item.slotChanges);
+                        const ok = await persistPartRecord(item.newPart, item.slotChanges, currentModule);
                         if (ok) {
                             delete pendingRowFiles[item.draftId];
                             delete pendingRowTags[item.draftId];
@@ -3281,16 +3716,19 @@
                                 codigo: item.newPart.codigo.trim(),
                                 descripcion: item.newPart.descripcion.trim(),
                                 categoria: item.newPart.categoria.trim(),
+                                ubicacion: (item.newPart.ubicacion || '').trim(),
                                 observaciones: item.newPart.observaciones.trim(),
+                                estado: (item.newPart.estado || '').trim(),
+                                ruta: (item.newPart.ruta || '').trim(),
                                 tags: normalizeTagsList(item.newPart.tags)
                             });
                         }
                     })
                 ]);
 
-                allParts.sort((a, b) => (a.codigo || '').localeCompare(b.codigo || ''));
+                allParts.sort((a, b) => (a.codigo || a.descripcion || '').localeCompare(b.codigo || b.descripcion || ''));
                 draftRows = remainingDrafts.length > 0 ? remainingDrafts : [{
-                    id: 'draft-' + Date.now(), codigo: '', descripcion: '', categoria: '', observaciones: '', tags: []
+                    id: 'draft-' + Date.now(), codigo: '', descripcion: '', categoria: '', ubicacion: '', observaciones: '', estado: '', ruta: '', tags: []
                 }];
 
                 updateObservationsFilterUI();
@@ -3359,29 +3797,34 @@
                 } else {
                     syncDraftInputsFromDOM();
                     const knownCodes = getKnownCodeKeys();
-                    const iamFile = files.find(f => isIamFileName(f.name));
 
-                    if (iamFile && files.length > 1) {
-                        const candidateCode = iamFile.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
-                        const key = normalizeCodeKey(candidateCode);
-                        if (key && knownCodes.has(key)) {
-                            showToast(`El código "${candidateCode}" ya existe.`);
+                    if (!isCatalogModule()) {
+                        const iamFile = files.find(f => isIamFileName(f.name));
+                        if (iamFile && files.length > 1) {
+                            const candidateCode = iamFile.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
+                            const key = normalizeCodeKey(candidateCode);
+                            if (key && knownCodes.has(key)) {
+                                showToast(`El código "${candidateCode}" ya existe.`);
+                                return;
+                            }
+                            const rowId = 'draft-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
+                            draftRows.push({
+                                id: rowId,
+                                codigo: candidateCode,
+                                descripcion: iamFile.name.replace(/\.[^/.]+$/, ''),
+                                categoria: '',
+                                ubicacion: '',
+                                observaciones: '',
+                                estado: '',
+                                ruta: '',
+                                tags: []
+                            });
+                            pendingRowFiles[rowId] = await readSelectedFilesIntoSlots(files);
+                            renderDraftRows();
+                            updatePendingChangesIndicator();
+                            showToast(`Ensamble "${candidateCode}" creado con ${files.length} archivo(s). Pulsa Guardar.`);
                             return;
                         }
-                        const rowId = 'draft-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
-                        draftRows.push({
-                            id: rowId,
-                            codigo: candidateCode,
-                            descripcion: iamFile.name.replace(/\.[^/.]+$/, ''),
-                            categoria: '',
-                            observaciones: '',
-                            tags: []
-                        });
-                        pendingRowFiles[rowId] = await readSelectedFilesIntoSlots(files);
-                        renderDraftRows();
-                        updatePendingChangesIndicator();
-                        showToast(`Ensamble "${candidateCode}" creado con ${files.length} archivo(s). Pulsa Guardar.`);
-                        return;
                     }
 
                     const draftByCodeKey = new Map();
@@ -3393,6 +3836,10 @@
                     let addedRows = 0, attachedToExistingDraft = 0, skipped = 0;
 
                     for (const file of files) {
+                        if (isCatalogModule() && !isImageFileName(file.name)) {
+                            showToast(`En Catálogo solo se admiten imágenes (${file.name}).`);
+                            continue;
+                        }
                         const slot = getFileExtensionSlot(file.name);
                         const candidateCode = file.name.replace(/\.[^/.]+$/, '').toUpperCase().slice(0, 24);
                         const key = normalizeCodeKey(candidateCode);
@@ -3413,16 +3860,19 @@
                             continue;
                         }
 
-                        if (key && knownCodes.has(key)) { skipped++; continue; }
+                        if (!isCatalogModule() && key && knownCodes.has(key)) { skipped++; continue; }
                         if (key) knownCodes.add(key);
 
                         const rowId = 'draft-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6);
                         const newDraft = {
                             id: rowId,
-                            codigo: candidateCode,
+                            codigo: isCatalogModule() ? '' : candidateCode,
                             descripcion: file.name.replace(/\.[^/.]+$/, ''),
                             categoria: '',
+                            ubicacion: '',
                             observaciones: '',
+                            estado: '',
+                            ruta: '',
                             tags: []
                         };
                         draftRows.push(newDraft);
@@ -3439,10 +3889,10 @@
             });
         }
 
-        function buildAdminIndividualFilesHTML(part) {
+        function buildAdminIndividualFilesHTML(part, onlyImages = false) {
             const chips = [];
-            const iptList = getActiveSlotFiles(part, 'ipt');
-            const stlList = getActiveSlotFiles(part, 'stl');
+            const iptList = onlyImages ? [] : getActiveSlotFiles(part, 'ipt');
+            const stlList = onlyImages ? [] : getActiveSlotFiles(part, 'stl');
             const imgList = getActiveSlotFiles(part, 'img');
 
             iptList.forEach((f, idx) => {
@@ -3568,9 +4018,32 @@
             `;
         }
 
+        function buildCatalogImageCellHTML(part) {
+            if (isAdmin) {
+                const chipsHTML = buildAdminIndividualFilesHTML(part, true);
+                return `
+                    <div class="flex items-center justify-between gap-2 min-w-[130px]">
+                        <div class="flex flex-wrap items-center gap-1.5 py-0.5">
+                            ${chipsHTML}
+                        </div>
+                        <label
+                            onclick="event.stopPropagation()"
+                            title="Cargar imagen"
+                            class="cursor-pointer w-7 h-7 rounded bg-[#1e2227] hover:bg-[#32373e] border border-[#3e454e] hover:border-[#1da1f2] text-emerald-400 flex items-center justify-center shrink-0 ml-auto transition"
+                        >
+                            <i class="fa-solid fa-plus text-xs"></i>
+                            <input type="file" accept="${ACCEPTED_IMAGE_EXTENSIONS}" multiple class="hidden" onchange="onTableRowFilesSelected('${part.id}', event)">
+                        </label>
+                    </div>
+                `;
+            }
+
+            return buildReadImagesControlHTML(part) || '<span class="text-[#5e6672]">—</span>';
+        }
+
         function buildFilesCellHTML(part) {
             if (isAdmin) {
-                const chipsHTML = buildAdminIndividualFilesHTML(part);
+                const chipsHTML = buildAdminIndividualFilesHTML(part, false);
                 return `
                     <div class="flex items-center justify-between gap-4 min-w-[180px]">
                         <div class="flex flex-wrap items-center gap-2 py-0.5">
@@ -3582,7 +4055,7 @@
                             class="cursor-pointer w-7 h-7 rounded bg-[#1e2227] hover:bg-[#32373e] border border-[#3e454e] hover:border-[#1da1f2] text-[#1da1f2] flex items-center justify-center shrink-0 ml-auto transition"
                         >
                             <i class="fa-solid fa-plus text-xs"></i>
-                            <input type="file" accept="${ACCEPTED_UPLOAD_EXTENSIONS}" multiple class="hidden" onchange="onTableRowFilesSelected('${part.id}', event)">
+                            <input type="file" accept="${ACCEPTED_HARDWARE_EXTENSIONS}" multiple class="hidden" onchange="onTableRowFilesSelected('${part.id}', event)">
                         </label>
                     </div>
                 `;
@@ -3610,6 +4083,13 @@
             `;
         }
 
+        function copyTextToClipboard(text) {
+            if (!text) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => showToast('Ruta copiada al portapapeles.')).catch(() => {});
+            }
+        }
+
         function getFilteredParts() {
             const terms = [];
             for (let i = 1; i <= 5; i++) {
@@ -3625,7 +4105,8 @@
                 if (terms.length === 0) return true;
 
                 const hay = part._searchNorm || normalizeText([
-                    part.codigo, part.descripcion, part.categoria, part.observaciones,
+                    part.codigo, part.descripcion, part.categoria, part.ubicacion,
+                    part.observaciones, part.estado, part.ruta,
                     ...normalizeTagsList(part.tags),
                     ...normalizeFileArray(part.iptFiles).map(f => f.name),
                     ...normalizeFileArray(part.stlFiles).map(f => f.name),
@@ -3642,6 +4123,7 @@
             const tbody = document.getElementById('parts-table-body');
             const emptyState = document.getElementById('empty-state');
             const filtered = getFilteredParts();
+            const isCat = isCatalogModule();
 
             updateObservationsFilterUI();
             document.getElementById('items-count').textContent = filtered.length;
@@ -3653,7 +4135,7 @@
             emptyState.classList.add('hidden');
 
             const groups = groupPartsByCategory(filtered);
-            const colSpan = isAdmin ? 7 : 6;
+            const colSpan = isCat ? (isAdmin ? 9 : 8) : (isAdmin ? 7 : 6);
             const frag = document.createDocumentFragment();
 
             groups.forEach(group => {
@@ -3680,57 +4162,113 @@
                 if (isCollapsed) return;
 
                 group.items.forEach(part => {
-                    const filesCellHTML = buildFilesCellHTML(part);
                     const isSelected = selectedPartId === part.id;
                     const hasObs = partHasObservations(part);
 
                     const tr = document.createElement('tr');
                     tr.dataset.partId = part.id;
-                    tr.dataset.partCode = part.codigo || part.id;
+                    tr.dataset.partCode = part.codigo || part.descripcion || part.id;
                     tr.className = `hover:bg-[#2d3238] transition-colors cursor-pointer ${hasObs ? 'row-has-obs' : ''} ${isSelected ? 'row-selected' : ''}`;
                     tr.addEventListener('click', () => selectPartRow(part.id));
 
-                    if (isAdmin) {
-                        const adminTagsHTML = buildAdminTagsEditorHTML(part.id, getActivePartTags(part), false);
-                        tr.innerHTML = `
-                            <td class="py-2 px-2.5 whitespace-nowrap">
-                                <input type="text" id="edit-code-${part.id}" value="${escapeHTML(part.codigo)}" class="inline-cell-input font-mono text-[#1da1f2] w-28">
-                            </td>
-                            <td class="py-2 px-2.5 min-w-[170px]">
-                                <input type="text" id="edit-desc-${part.id}" value="${escapeHTML(part.descripcion)}" class="inline-cell-input">
-                            </td>
-                            <td class="py-2 px-2.5 min-w-[130px]">
-                                <input type="text" id="edit-cat-${part.id}" value="${escapeHTML(part.categoria)}" class="inline-cell-input">
-                            </td>
-                            <td class="py-2 px-2.5 min-w-[160px]">
-                                <input type="text" id="edit-obs-${part.id}" value="${escapeHTML(part.observaciones || '')}" class="inline-cell-input ${hasObs ? 'text-red-200 border-red-400/50' : 'text-[#aeb6c2]'}">
-                            </td>
-                            <td class="py-2 px-2.5 min-w-[160px]">
-                                <div class="info-cell-slot">${adminTagsHTML}</div>
-                            </td>
-                            <td class="py-2 px-2.5">
-                                <div class="files-cell-slot">${filesCellHTML}</div>
-                            </td>
-                            <td class="py-2 px-2.5 whitespace-nowrap text-right">
-                                <button onclick="event.stopPropagation(); confirmDeletePart('${part.id}')" title="Eliminar ítem completo" class="px-2 py-1 rounded bg-[#1e2227] hover:bg-red-950/60 text-[#aeb6c2] hover:text-red-400 text-xs transition">
-                                    <i class="fa-solid fa-trash"></i>
-                                </button>
-                            </td>
-                        `;
+                    if (isCat) {
+                        const imgCellHTML = buildCatalogImageCellHTML(part);
+                        if (isAdmin) {
+                            tr.innerHTML = `
+                                <td class="py-2 px-2.5 min-w-[170px]">
+                                    <input type="text" id="edit-desc-${part.id}" value="${escapeHTML(part.descripcion)}" class="inline-cell-input">
+                                </td>
+                                <td class="py-2 px-2.5 min-w-[120px]">
+                                    <input type="text" id="edit-cat-${part.id}" value="${escapeHTML(part.categoria)}" class="inline-cell-input">
+                                </td>
+                                <td class="py-2 px-2.5 min-w-[120px]">
+                                    <input type="text" id="edit-loc-${part.id}" value="${escapeHTML(part.ubicacion || '')}" class="inline-cell-input">
+                                </td>
+                                <td class="py-2 px-2.5">
+                                    <div class="files-cell-slot">${imgCellHTML}</div>
+                                </td>
+                                <td class="py-2 px-2.5 min-w-[150px]">
+                                    <input type="text" id="edit-obs-${part.id}" value="${escapeHTML(part.observaciones || '')}" class="inline-cell-input ${hasObs ? 'text-red-200 border-red-400/50' : 'text-[#aeb6c2]'}">
+                                </td>
+                                <td class="py-2 px-2.5 whitespace-nowrap">
+                                    <input type="text" id="edit-code-${part.id}" value="${escapeHTML(part.codigo)}" class="inline-cell-input font-mono text-[#1da1f2] w-28">
+                                </td>
+                                <td class="py-2 px-2.5 min-w-[110px]">
+                                    <input type="text" id="edit-status-${part.id}" value="${escapeHTML(part.estado || '')}" class="inline-cell-input">
+                                </td>
+                                <td class="py-2 px-2.5 min-w-[160px]">
+                                    <input type="text" id="edit-route-${part.id}" value="${escapeHTML(part.ruta || '')}" class="inline-cell-input font-mono text-[#cfd5de]">
+                                </td>
+                                <td class="py-2 px-2.5 whitespace-nowrap text-right">
+                                    <button onclick="event.stopPropagation(); confirmDeletePart('${part.id}')" title="Eliminar ítem" class="px-2 py-1 rounded bg-[#1e2227] hover:bg-red-950/60 text-[#aeb6c2] hover:text-red-400 text-xs transition">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </td>
+                            `;
+                        } else {
+                            const routeDisplay = (part.ruta || '').trim();
+                            tr.innerHTML = `
+                                <td class="py-2.5 px-3 text-[#e2e6ec] font-medium align-top">${escapeHTML(part.descripcion || '—')}</td>
+                                <td class="py-2.5 px-3 whitespace-nowrap text-[#cfd5de] align-top">${escapeHTML(part.categoria || '—')}</td>
+                                <td class="py-2.5 px-3 whitespace-nowrap text-[#cfd5de] align-top">${escapeHTML(part.ubicacion || '—')}</td>
+                                <td class="py-2.5 px-3 whitespace-nowrap text-center align-top">
+                                    <span class="files-cell-slot">${imgCellHTML}</span>
+                                </td>
+                                <td class="py-2.5 px-3 max-w-md align-top ${hasObs ? 'text-red-200 font-medium' : 'text-[#9aa2ad]'}">${escapeHTML(part.observaciones || '—')}</td>
+                                <td class="py-2.5 px-3 whitespace-nowrap font-mono text-xs font-semibold text-[#1da1f2] align-top">${escapeHTML(part.codigo || '—')}</td>
+                                <td class="py-2.5 px-3 whitespace-nowrap text-[#cfd5de] align-top">${escapeHTML(part.estado || '—')}</td>
+                                <td class="py-2.5 px-3 font-mono text-[11px] text-[#aeb6c2] align-top">
+                                    ${routeDisplay
+                                        ? `<button type="button" onclick="event.stopPropagation(); copyTextToClipboard('${escapeHTML(routeDisplay).replace(/'/g, "\\'")}')" title="Copiar ruta" class="inline-flex items-center gap-1.5 text-left hover:text-[#1da1f2] transition"><span class="break-all">${escapeHTML(routeDisplay)}</span><i class="fa-regular fa-copy text-[10px] opacity-70 shrink-0"></i></button>`
+                                        : '<span class="text-[#5e6672]">—</span>'
+                                    }
+                                </td>
+                            `;
+                        }
                     } else {
-                        const readInfoHTML = buildReadInfoCellHTML(part);
-                        tr.innerHTML = `
-                            <td class="py-2.5 px-3 whitespace-nowrap font-mono text-xs font-semibold text-[#1da1f2] align-top">${escapeHTML(part.codigo)}</td>
-                            <td class="py-2.5 px-3 text-[#e2e6ec] font-medium align-top">${escapeHTML(part.descripcion)}</td>
-                            <td class="py-2.5 px-3 whitespace-nowrap text-[#cfd5de] align-top">${escapeHTML(part.categoria)}</td>
-                            <td class="py-2.5 px-3 max-w-md align-top ${hasObs ? 'text-red-200 font-medium' : 'text-[#9aa2ad]'}">${escapeHTML(part.observaciones || '—')}</td>
-                            <td class="py-2.5 px-3 text-center align-top">
-                                <div class="info-cell-slot flex justify-center">${readInfoHTML}</div>
-                            </td>
-                            <td class="py-2.5 px-3 whitespace-nowrap text-center align-top">
-                                <span class="files-cell-slot">${filesCellHTML}</span>
-                            </td>
-                        `;
+                        const filesCellHTML = buildFilesCellHTML(part);
+                        if (isAdmin) {
+                            const adminTagsHTML = buildAdminTagsEditorHTML(part.id, getActivePartTags(part), false);
+                            tr.innerHTML = `
+                                <td class="py-2 px-2.5 whitespace-nowrap">
+                                    <input type="text" id="edit-code-${part.id}" value="${escapeHTML(part.codigo)}" class="inline-cell-input font-mono text-[#1da1f2] w-28">
+                                </td>
+                                <td class="py-2 px-2.5 min-w-[170px]">
+                                    <input type="text" id="edit-desc-${part.id}" value="${escapeHTML(part.descripcion)}" class="inline-cell-input">
+                                </td>
+                                <td class="py-2 px-2.5 min-w-[130px]">
+                                    <input type="text" id="edit-cat-${part.id}" value="${escapeHTML(part.categoria)}" class="inline-cell-input">
+                                </td>
+                                <td class="py-2 px-2.5 min-w-[160px]">
+                                    <input type="text" id="edit-obs-${part.id}" value="${escapeHTML(part.observaciones || '')}" class="inline-cell-input ${hasObs ? 'text-red-200 border-red-400/50' : 'text-[#aeb6c2]'}">
+                                </td>
+                                <td class="py-2 px-2.5 min-w-[160px]">
+                                    <div class="info-cell-slot">${adminTagsHTML}</div>
+                                </td>
+                                <td class="py-2 px-2.5">
+                                    <div class="files-cell-slot">${filesCellHTML}</div>
+                                </td>
+                                <td class="py-2 px-2.5 whitespace-nowrap text-right">
+                                    <button onclick="event.stopPropagation(); confirmDeletePart('${part.id}')" title="Eliminar ítem completo" class="px-2 py-1 rounded bg-[#1e2227] hover:bg-red-950/60 text-[#aeb6c2] hover:text-red-400 text-xs transition">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </td>
+                            `;
+                        } else {
+                            const readInfoHTML = buildReadInfoCellHTML(part);
+                            tr.innerHTML = `
+                                <td class="py-2.5 px-3 whitespace-nowrap font-mono text-xs font-semibold text-[#1da1f2] align-top">${escapeHTML(part.codigo)}</td>
+                                <td class="py-2.5 px-3 text-[#e2e6ec] font-medium align-top">${escapeHTML(part.descripcion)}</td>
+                                <td class="py-2.5 px-3 whitespace-nowrap text-[#cfd5de] align-top">${escapeHTML(part.categoria)}</td>
+                                <td class="py-2.5 px-3 max-w-md align-top ${hasObs ? 'text-red-200 font-medium' : 'text-[#9aa2ad]'}">${escapeHTML(part.observaciones || '—')}</td>
+                                <td class="py-2.5 px-3 text-center align-top">
+                                    <div class="info-cell-slot flex justify-center">${readInfoHTML}</div>
+                                </td>
+                                <td class="py-2.5 px-3 whitespace-nowrap text-center align-top">
+                                    <span class="files-cell-slot">${filesCellHTML}</span>
+                                </td>
+                            `;
+                        }
                     }
                     frag.appendChild(tr);
                 });
@@ -3769,7 +4307,8 @@
             document.getElementById('admin-quick-create-panel').classList.toggle('hidden', !isAdmin);
             document.getElementById('admin-toolbar-actions').classList.toggle('hidden', !isAdmin);
             document.getElementById('admin-toolbar-actions').classList.toggle('flex', isAdmin);
-            document.getElementById('admin-actions-th').classList.toggle('hidden', !isAdmin);
+            const th = document.getElementById('admin-actions-th');
+            if (th) th.classList.toggle('hidden', !isAdmin);
             document.getElementById('auth-btn-text').textContent = isAdmin ? 'Salir Admin' : 'Admin';
             document.getElementById('role-badge').innerHTML = isAdmin
                 ? '<span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span><span class="text-amber-300 font-semibold">Admin</span>'
@@ -3783,9 +4322,11 @@
             if (!isAdmin) return;
             const p = allParts.find(x => x.id === partId);
             if (!p) return;
-            openConfirmModal('Eliminar Ítem', `¿Eliminar completamente "${p.codigo || partId}" y sus archivos?`, async () => {
-                await removePartRecord(p);
+            openConfirmModal('Eliminar Ítem', `¿Eliminar completamente "${p.codigo || p.descripcion || partId}" y sus archivos?`, async () => {
+                await removePartRecord(p, currentModule);
                 allParts = allParts.filter(x => x.id !== partId);
+                if (isCatalogModule()) catalogItems = allParts;
+                else hardwareParts = allParts;
                 baselineSnapshots.delete(partId);
                 delete pendingRowFiles[partId];
                 delete pendingRowTags[partId];
@@ -3822,9 +4363,11 @@
                 }));
                 return clean;
             });
-            const blob = new Blob([JSON.stringify({ parts }, null, 2)], { type: 'application/json' });
+            const blob = new Blob([JSON.stringify({ module: currentModule, parts }, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a'); a.href = url; a.download = 'DataWaves_Backup.json'; a.click();
+            const a = document.createElement('a'); a.href = url;
+            a.download = isCatalogModule() ? 'DataWaves_Catalogo_Backup.json' : 'DataWaves_Ferreteria_Backup.json';
+            a.click();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
 
@@ -3842,7 +4385,7 @@
                 const rawStls = normalizeFileArray(item.stlFiles || item.stlFile);
                 const rawImgs = normalizeFileArray(item.imgFiles);
 
-                if (rawIpts.some(f => f.base64Data)) {
+                if (!isCatalogModule() && rawIpts.some(f => f.base64Data)) {
                     slotChanges.ipt = rawIpts.filter(f => f.base64Data).map(f => ({
                         name: f.name,
                         size: f.size,
@@ -3850,7 +4393,7 @@
                         _isNewUpload: true
                     }));
                 }
-                if (rawStls.some(f => f.base64Data)) {
+                if (!isCatalogModule() && rawStls.some(f => f.base64Data)) {
                     slotChanges.stl = rawStls.filter(f => f.base64Data).map(f => ({
                         name: f.name,
                         size: f.size,
@@ -3871,9 +4414,13 @@
                 item.stlFiles = [];
                 item.imgFiles = [];
                 item.tags = normalizeTagsList(item.tags);
-                await persistPartRecord(item, slotChanges);
+                await persistPartRecord(item, slotChanges, currentModule);
             }
-            allParts = await fetchAllParts(true);
+            const refreshed = await fetchModuleParts(currentModule, true);
+            if (isCatalogModule()) catalogItems = refreshed;
+            else hardwareParts = refreshed;
+            allParts = refreshed;
+            captureBaselineSnapshots(allParts);
             renderPartsTable();
             e.target.value = '';
         }
@@ -3937,8 +4484,23 @@
 
         window.addEventListener('DOMContentLoaded', async () => {
             await initIndexedDB();
-            draftRows = [{ id: 'draft-' + Date.now(), codigo: '', descripcion: '', categoria: '', observaciones: '', tags: [] }];
-            allParts = initSupabase() ? await fetchAllParts() : [];
+            draftRows = [{ id: 'draft-' + Date.now(), codigo: '', descripcion: '', categoria: '', ubicacion: '', observaciones: '', estado: '', ruta: '', tags: [] }];
+
+            if (initSupabase()) {
+                const [catList, hwList] = await Promise.all([
+                    fetchModuleParts('catalog'),
+                    fetchModuleParts('hardware')
+                ]);
+                catalogItems = catList;
+                hardwareParts = hwList;
+            } else {
+                catalogItems = [];
+                hardwareParts = [];
+            }
+
+            allParts = isCatalogModule() ? catalogItems : hardwareParts;
+            captureBaselineSnapshots(allParts);
+            updateModuleChromeUI();
             renderPartsTable();
             setupPageAndRowDragAndDrop();
 
@@ -3949,16 +4511,24 @@
                     const partId = row && row.dataset.partId;
                     const part = partId && allParts.find(x => x.id === partId);
                     const snap = part && baselineSnapshots.get(partId);
-                    if (snap) {
-                        const curCode = document.getElementById(`edit-code-${partId}`)?.value.trim() ?? '';
-                        const curDesc = document.getElementById(`edit-desc-${partId}`)?.value.trim() ?? '';
-                        const curCat = document.getElementById(`edit-cat-${partId}`)?.value.trim() ?? '';
+                    if (snap && part) {
+                        const curCode = (document.getElementById(`edit-code-${partId}`)?.value ?? part.codigo ?? '').trim();
+                        const curDesc = (document.getElementById(`edit-desc-${partId}`)?.value ?? part.descripcion ?? '').trim();
+                        const curCat = (document.getElementById(`edit-cat-${partId}`)?.value ?? part.categoria ?? '').trim();
+                        const curLoc = (document.getElementById(`edit-loc-${partId}`)?.value ?? part.ubicacion ?? '').trim();
                         const obsInputEl = document.getElementById(`edit-obs-${partId}`);
-                        const curObs = obsInputEl?.value.trim() ?? '';
+                        const curObs = (obsInputEl?.value ?? part.observaciones ?? '').trim();
+                        const curStatus = (document.getElementById(`edit-status-${partId}`)?.value ?? part.estado ?? '').trim();
+                        const curRoute = (document.getElementById(`edit-route-${partId}`)?.value ?? part.ruta ?? '').trim();
+
                         document.getElementById(`edit-code-${partId}`)?.classList.toggle('cell-changed', curCode !== snap.codigo);
                         document.getElementById(`edit-desc-${partId}`)?.classList.toggle('cell-changed', curDesc !== snap.descripcion);
                         document.getElementById(`edit-cat-${partId}`)?.classList.toggle('cell-changed', curCat !== snap.categoria);
+                        document.getElementById(`edit-loc-${partId}`)?.classList.toggle('cell-changed', curLoc !== snap.ubicacion);
                         obsInputEl?.classList.toggle('cell-changed', curObs !== snap.observaciones);
+                        document.getElementById(`edit-status-${partId}`)?.classList.toggle('cell-changed', curStatus !== snap.estado);
+                        document.getElementById(`edit-route-${partId}`)?.classList.toggle('cell-changed', curRoute !== snap.ruta);
+
                         if (row) {
                             row.classList.toggle('row-has-obs', curObs.length > 0);
                         }
