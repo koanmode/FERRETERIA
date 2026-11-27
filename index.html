@@ -251,6 +251,26 @@
             </div>
         </div>
 
+        <!-- ===== NAVEGACIÓN ENTRE MÓDULOS (Ferretería <-> Catálogo Datawaves) ===== -->
+        <div class="bg-[#1d2126] border-b border-[#2e343d] px-4 py-3 shrink-0">
+            <p class="text-[10px] font-mono uppercase tracking-wider text-[#8b94a0] mb-1.5">Ir a módulo</p>
+            <button
+                type="button"
+                id="module-switch-btn"
+                onclick="dwcToggleModule()"
+                class="w-full px-3 py-2.5 rounded bg-[#252a30] hover:bg-[#2f353d] border border-[#383e47] hover:border-[#1da1f2] text-left transition flex items-center gap-3 group"
+            >
+                <span id="module-switch-icon" class="w-8 h-8 rounded bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-book-open text-xs"></i>
+                </span>
+                <span class="flex-1 min-w-0">
+                    <span id="module-switch-label" class="block text-xs font-bold uppercase tracking-wider text-white truncate">Catálogo Datawaves</span>
+                    <span id="module-switch-sub" class="block text-[10px] font-mono text-[#9aa2ad] truncate">Descripción • Ubicación • Imagen • Ruta</span>
+                </span>
+                <i class="fa-solid fa-arrow-right-arrow-left text-[11px] text-[#7c8591] group-hover:text-[#1da1f2] transition"></i>
+            </button>
+        </div>
+
         <div class="bg-[#20242a] border-b border-[#2e343d] px-4 py-2 flex flex-wrap items-center gap-1.5 shrink-0">
             <span class="text-[10px] font-mono text-[#8b94a0] mr-1">Ejemplos:</span>
             <button
@@ -390,6 +410,129 @@
             <div id="empty-state" class="hidden py-12 px-4 text-center">
                 <p class="text-sm font-medium text-[#cfd5de]">No se encontraron ítems coincidentes</p>
                 <p class="text-xs text-[#9aa2ad] mt-1">Ningún registro cumple simultáneamente con todos los filtros ingresados.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- =====================================================================
+         MÓDULO PARALELO: CATÁLOGO DATAWAVES
+         (independiente de Ferretería: tabla Supabase "dw_catalogo")
+         ===================================================================== -->
+    <main id="catalogo-module" class="hidden flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-5 py-4 space-y-4">
+        <section class="dw-card p-3">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-[#cfd5de]">
+                    <i class="fa-solid fa-filter text-[#1da1f2]"></i>
+                    <span>Filtro Múltiple Acumulativo • Catálogo</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs text-[#9aa2ad]">Registros: <strong id="dwc-count" class="font-mono text-[#1da1f2]">0</strong></span>
+                    <button
+                        type="button"
+                        id="dwc-noimg-btn"
+                        onclick="dwcToggleNoImg()"
+                        title="Mostrar únicamente los ítems que todavía no tienen imagen"
+                        class="px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-xs text-[#e2e6ec] transition flex items-center gap-1.5"
+                    >
+                        <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                        <span>Sin imagen</span>
+                        <span id="dwc-noimg-count" class="font-mono text-[10px] text-[#9aa2ad]">(0)</span>
+                    </button>
+                    <button type="button" onclick="dwcClearSearch()" class="px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-xs text-[#e2e6ec] transition">
+                        Limpiar
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                <input type="text" id="dwc-search-1" placeholder="Filtro 1..." class="dwc-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="dwc-search-2" placeholder="Filtro 2..." class="dwc-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="dwc-search-3" placeholder="Filtro 3..." class="dwc-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="dwc-search-4" placeholder="Filtro 4..." class="dwc-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+                <input type="text" id="dwc-search-5" placeholder="Filtro 5..." class="dwc-search-input w-full px-2.5 py-1.5 bg-[#1e2227] border border-[#3c424b] rounded text-xs text-[#e2e6ec] focus:outline-none focus:border-[#1da1f2]">
+            </div>
+        </section>
+
+        <section id="dwc-admin-panel" class="hidden dw-card">
+            <div class="dw-card-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">
+                    <i class="fa-solid fa-table-list text-[#1da1f2]"></i>
+                    <span>CARGA RÁPIDA / EXCEL • CATÁLOGO (SIN DUPLICADOS POR CÓDIGO)</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-1.5">
+                    <label title="Importar Excel (.xlsx, .xls, .csv) — columnas: Descripción, Categoría, Ubicación, Imagen, Código, Notas, Ruta" class="cursor-pointer px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-[#e2e6ec] text-xs font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-file-excel text-emerald-400"></i> Importar Excel
+                        <input type="file" id="dwc-excel-input" accept=".xlsx,.xls,.csv" class="hidden" onchange="dwcHandleExcel(event)">
+                    </label>
+                    <button type="button" onclick="dwcAddDraft()" class="px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-[#e2e6ec] text-xs font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus text-[#1da1f2]"></i> Agregar fila
+                    </button>
+                    <button type="button" onclick="dwcSaveAll()" class="px-3 py-1 rounded bg-[#1da1f2] hover:bg-[#1488d1] text-white text-xs font-semibold transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i> Guardar cambios
+                    </button>
+                </div>
+            </div>
+            <div class="hidden lg:grid grid-cols-12 gap-2 px-5 pt-3 text-[10px] font-semibold uppercase tracking-wider text-[#8b94a0]">
+                <div class="col-span-2">Descripción</div>
+                <div class="col-span-1">Categoría</div>
+                <div class="col-span-1">Ubicación</div>
+                <div class="col-span-2">Imagen</div>
+                <div class="col-span-1">Código</div>
+                <div class="col-span-2">Notas</div>
+                <div class="col-span-2">Ruta</div>
+                <div class="col-span-1"></div>
+            </div>
+            <div id="dwc-drafts" class="p-3 space-y-2"></div>
+        </section>
+
+        <section class="dw-card overflow-hidden">
+            <div class="dw-card-header px-4 py-2.5 flex flex-wrap items-center justify-between gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-[#e2e6ec]">CATÁLOGO DATAWAVES • AGRUPADO POR CATEGORÍA</span>
+                    <span class="inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded bg-[#23272c] text-[#b5bcc6] border border-[#343a42]">
+                        <span id="dwc-mode-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                        <span id="dwc-mode-text">Conectando...</span>
+                    </span>
+                    <span id="dwc-pending-badge" class="hidden px-2 py-0.5 rounded bg-[#1da1f2]/20 border border-[#1da1f2]/50 text-[#69c3fa] font-mono text-[10px]">
+                        0 cambio(s) pendiente(s)
+                    </span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button type="button" onclick="dwcToggleAllCategories()" class="text-[11px] font-mono text-[#1da1f2] hover:text-[#69c3fa] transition">
+                        Expandir / Colapsar todo
+                    </button>
+                    <p class="hidden sm:block text-[11px] text-[#9aa2ad]">
+                        Clic en fila para resaltar • Clic en foto para ampliar • Admin: <code class="text-[#1da1f2]">+</code> o arrastrá imágenes sobre la fila
+                    </p>
+                </div>
+            </div>
+
+            <div id="dwc-local-note" class="hidden px-4 py-2 bg-amber-500/10 border-b border-amber-400/30 text-[11px] text-amber-200 flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+                <span>Modo local: no se encontró la tabla <code class="font-mono">dw_catalogo</code> en Supabase. Los datos del catálogo se guardan sólo en este navegador.</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-[#22262b] border-b border-[#383e47] text-[11px] font-semibold text-[#c2c8d1]">
+                            <th class="py-2.5 px-3">Descripción</th>
+                            <th class="py-2.5 px-3">Categoría</th>
+                            <th class="py-2.5 px-3">Ubicación</th>
+                            <th class="py-2.5 px-3 text-center">Imagen</th>
+                            <th class="py-2.5 px-3">Código</th>
+                            <th class="py-2.5 px-3">Notas</th>
+                            <th class="py-2.5 px-3">Ruta</th>
+                            <th id="dwc-admin-th" class="hidden py-2.5 px-3 text-right">Admin</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dwc-tbody" class="divide-y divide-[#30363e] text-xs"></tbody>
+                </table>
+            </div>
+
+            <div id="dwc-empty" class="hidden py-12 px-4 text-center">
+                <p id="dwc-empty-title" class="text-sm font-medium text-[#cfd5de]">No se encontraron ítems coincidentes</p>
+                <p id="dwc-empty-sub" class="text-xs text-[#9aa2ad] mt-1">Ningún registro cumple simultáneamente con todos los filtros ingresados.</p>
             </div>
         </section>
     </main>
@@ -3973,6 +4116,1281 @@
                     filterDebounceTimer = setTimeout(renderPartsTable, 120);
                 });
             });
+        });
+    </script>
+    <script>
+        /* =========================================================================
+           MÓDULO PARALELO: CATÁLOGO DATAWAVES
+           - Independiente de Ferretería: tabla Supabase "dw_catalogo" e imágenes
+             en el bucket "cad-models" bajo la carpeta "catalogo/".
+           - Si la tabla no existe, funciona en modo local (IndexedDB propia).
+           - Reutiliza (sin modificarlos) helpers globales de Ferretería:
+             escapeHTML, normalizeText, normalizeCodeKey, showToast, showSavedPopup,
+             openConfirmModal, isImageFileName, getImageMimeType, isAdmin y el
+             visor de imágenes.
+           ========================================================================= */
+
+        const DWC_TABLE = 'dw_catalogo';
+        const DWC_BUCKET = 'cad-models';
+        const DWC_STORAGE_PREFIX = 'catalogo';
+        const DWC_IDB_NAME = 'DataWaves_Catalogo_DB';
+        const DWC_IDB_STORE = 'items';
+        const DWC_MODULE_KEY = 'dw_active_module';
+        const DWC_TEXT_FIELDS = ['descripcion', 'categoria', 'ubicacion', 'codigo', 'notas', 'ruta'];
+        const DWC_LABELS = {
+            descripcion: 'Descripción',
+            categoria: 'Categoría',
+            ubicacion: 'Ubicación',
+            codigo: 'Código',
+            notas: 'Notas',
+            ruta: 'Ruta'
+        };
+        const DWC_FERR_TITLE = 'DATAWAVES - FERRETERÍA CAD (.IAM / .IPT / .STL)';
+        const DWC_CAT_TITLE = 'DATAWAVES - CATÁLOGO DATAWAVES';
+        const DWC_DASH = '<span class="text-[#5e6672]">—</span>';
+
+        let activeModule = 'ferreteria';
+        let dwcClient = null;
+        let dwcMode = 'connecting'; // 'connecting' | 'supabase' | 'local'
+        let dwcIdb = null;
+        let dwcLoaded = false;
+        let dwcItems = [];
+        let dwcBaseline = new Map();
+        let dwcEdits = {};
+        let dwcDrafts = [];
+        let dwcPendingImgs = {};
+        let dwcSelectedId = null;
+        let dwcCollapsed = new Set();
+        let dwcOnlyNoImg = false;
+        let dwcFilterTimer = null;
+        let dwcSaving = false;
+        let dwcDragCounter = 0;
+        const dwcObjUrlCache = new Map();
+
+        /* ---------- Utilidades ---------- */
+
+        function dwcHasOwn(obj, key) {
+            return Object.prototype.hasOwnProperty.call(obj, key);
+        }
+
+        function dwcNewId(prefix) {
+            return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        }
+
+        function dwcEmptyDraft() {
+            return { id: dwcNewId('dwcdraft'), descripcion: '', categoria: '', ubicacion: '', codigo: '', notas: '', ruta: '' };
+        }
+
+        function dwcFindItem(id) {
+            return dwcItems.find(x => x.id === id) || null;
+        }
+
+        /* ---------- IndexedDB propia (modo local) ---------- */
+
+        function dwcOpenIdb() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DWC_IDB_NAME, 1);
+                req.onupgradeneeded = e => {
+                    const d = e.target.result;
+                    if (!d.objectStoreNames.contains(DWC_IDB_STORE)) {
+                        d.createObjectStore(DWC_IDB_STORE, { keyPath: 'id' });
+                    }
+                };
+                req.onsuccess = e => { dwcIdb = e.target.result; resolve(dwcIdb); };
+                req.onerror = e => reject(e.target.error);
+            });
+        }
+
+        function dwcIdbAll() {
+            return new Promise((resolve, reject) => {
+                if (!dwcIdb) return resolve([]);
+                const req = dwcIdb.transaction(DWC_IDB_STORE, 'readonly').objectStore(DWC_IDB_STORE).getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function dwcIdbPut(item) {
+            return new Promise((resolve, reject) => {
+                if (!dwcIdb) return reject(new Error('Base local no disponible.'));
+                const req = dwcIdb.transaction(DWC_IDB_STORE, 'readwrite').objectStore(DWC_IDB_STORE).put(item);
+                req.onsuccess = () => resolve(true);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        function dwcIdbDelete(id) {
+            return new Promise((resolve, reject) => {
+                if (!dwcIdb) return resolve(true);
+                const req = dwcIdb.transaction(DWC_IDB_STORE, 'readwrite').objectStore(DWC_IDB_STORE).delete(id);
+                req.onsuccess = () => resolve(true);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        /* ---------- Modelo de datos ---------- */
+
+        function dwcNormImgs(list) {
+            if (typeof list === 'string') {
+                try { list = JSON.parse(list); } catch (_) { list = []; }
+            }
+            if (!Array.isArray(list)) return [];
+            return list
+                .filter(x => x && (x.path || x.data))
+                .map(x => ({
+                    name: x.name || 'imagen',
+                    size: x.size || (x.data ? x.data.byteLength : 0),
+                    type: x.type || getImageMimeType(x.name),
+                    path: x.path || null,
+                    data: x.data || null
+                }));
+        }
+
+        function dwcRowToItem(r) {
+            const it = {
+                id: r.id,
+                descripcion: r.descripcion || '',
+                categoria: r.categoria || '',
+                ubicacion: r.ubicacion || '',
+                codigo: r.codigo || '',
+                notas: r.notas || '',
+                ruta: r.ruta || '',
+                imagenes: dwcNormImgs(r.imagenes),
+                updated_at: r.updated_at || ''
+            };
+            dwcBuildIndex(it);
+            return it;
+        }
+
+        function dwcBuildIndex(it) {
+            it._s = normalizeText([
+                ...DWC_TEXT_FIELDS.map(f => it[f] || ''),
+                ...(it.imagenes || []).map(f => f.name)
+            ].join(' '));
+        }
+
+        function dwcSnap(it) {
+            const o = {};
+            DWC_TEXT_FIELDS.forEach(f => { o[f] = String(it[f] || '').trim(); });
+            return o;
+        }
+
+        function dwcCaptureBaseline() {
+            dwcBaseline.clear();
+            dwcItems.forEach(it => dwcBaseline.set(it.id, dwcSnap(it)));
+        }
+
+        function dwcSortItems() {
+            dwcItems.sort((a, b) =>
+                (a.descripcion || a.codigo || '').localeCompare(b.descripcion || b.codigo || '', 'es', { sensitivity: 'base' })
+            );
+        }
+
+        async function dwcLoadItems() {
+            let rows = null;
+            if (dwcClient) {
+                const { data, error } = await dwcClient.from(DWC_TABLE).select('*');
+                if (!error) {
+                    dwcMode = 'supabase';
+                    rows = data || [];
+                } else {
+                    console.warn('[Catálogo] Supabase:', error);
+                    dwcMode = 'local';
+                    showToast('Catálogo: no se encontró la tabla "dw_catalogo" en Supabase. Trabajando en modo local.');
+                }
+            } else {
+                dwcMode = 'local';
+            }
+            if (dwcMode === 'local') {
+                rows = await dwcIdbAll();
+            }
+            dwcItems = (rows || []).map(dwcRowToItem);
+            dwcSortItems();
+            dwcCaptureBaseline();
+            dwcLoaded = true;
+            dwcUpdateModeBadge();
+        }
+
+        function dwcUpdateModeBadge() {
+            const dot = document.getElementById('dwc-mode-dot');
+            const txt = document.getElementById('dwc-mode-text');
+            const note = document.getElementById('dwc-local-note');
+            if (!dot || !txt) return;
+            if (dwcMode === 'supabase') {
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-400';
+                txt.textContent = 'Supabase • dw_catalogo';
+            } else if (dwcMode === 'local') {
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
+                txt.textContent = 'Local (este navegador)';
+            } else {
+                dot.className = 'w-1.5 h-1.5 rounded-full bg-amber-400';
+                txt.textContent = 'Conectando...';
+            }
+            if (note) note.classList.toggle('hidden', dwcMode !== 'local');
+        }
+
+        /* ---------- Imágenes ---------- */
+
+        function dwcImgUrl(f) {
+            if (!f) return '';
+            if (f.data) {
+                let u = dwcObjUrlCache.get(f);
+                if (!u) {
+                    u = URL.createObjectURL(new Blob([f.data], { type: f.type || getImageMimeType(f.name) }));
+                    dwcObjUrlCache.set(f, u);
+                }
+                return u;
+            }
+            if (f.path && dwcClient) {
+                const { data } = dwcClient.storage.from(DWC_BUCKET).getPublicUrl(f.path);
+                return data && data.publicUrl ? data.publicUrl : '';
+            }
+            return '';
+        }
+
+        function dwcActiveImgs(id) {
+            if (dwcHasOwn(dwcPendingImgs, id)) return dwcPendingImgs[id] || [];
+            const it = dwcFindItem(id);
+            return it ? (it.imagenes || []) : [];
+        }
+
+        function dwcSameImgs(a, b) {
+            const x = a || [], y = b || [];
+            return x.length === y.length && x.every((v, i) => v === y[i]);
+        }
+
+        async function dwcReadImageFiles(files) {
+            const out = [];
+            let skipped = 0;
+            for (const f of files) {
+                if (!isImageFileName(f.name)) { skipped++; continue; }
+                const buf = await f.arrayBuffer();
+                out.push({
+                    name: f.name,
+                    size: buf.byteLength,
+                    type: f.type || getImageMimeType(f.name),
+                    path: null,
+                    data: buf,
+                    _isNew: true
+                });
+            }
+            if (skipped > 0) showToast(`${skipped} archivo(s) omitido(s): el catálogo sólo admite imágenes.`);
+            return out;
+        }
+
+        async function dwcAddImages(id, files, isDraft) {
+            if (!isAdmin) return;
+            const news = await dwcReadImageFiles(files);
+            if (news.length === 0) return;
+            if (isDraft) {
+                dwcSyncDrafts();
+                dwcPendingImgs[id] = [...(dwcPendingImgs[id] || []), ...news];
+                dwcRenderDrafts();
+            } else {
+                dwcPendingImgs[id] = [...dwcActiveImgs(id), ...news];
+                dwcRefreshRowImgs(id);
+            }
+            dwcUpdatePending();
+            showToast(`${news.length} imagen(es) agregada(s). Pulsá Guardar para confirmar.`);
+        }
+
+        async function dwcOnImgsSelected(id, event, isDraft) {
+            const files = Array.from(event.target.files || []);
+            event.target.value = '';
+            if (files.length === 0) return;
+            await dwcAddImages(id, files, isDraft);
+        }
+
+        function dwcRemoveImg(id, idx, isDraft) {
+            if (!isAdmin) return;
+            if (isDraft) {
+                dwcSyncDrafts();
+                const l = [...(dwcPendingImgs[id] || [])];
+                l.splice(idx, 1);
+                if (l.length > 0) dwcPendingImgs[id] = l;
+                else delete dwcPendingImgs[id];
+                dwcRenderDrafts();
+            } else {
+                const it = dwcFindItem(id);
+                const l = [...dwcActiveImgs(id)];
+                if (idx < 0 || idx >= l.length) return;
+                l.splice(idx, 1);
+                if (it && dwcSameImgs(l, it.imagenes)) delete dwcPendingImgs[id];
+                else dwcPendingImgs[id] = l;
+                dwcRefreshRowImgs(id);
+            }
+            dwcUpdatePending();
+        }
+
+        function dwcRefreshRowImgs(id) {
+            const slot = document.querySelector(`tr[data-dwc-id="${id}"] .dwc-img-slot`);
+            const it = dwcFindItem(id);
+            if (slot && it) {
+                slot.innerHTML = isAdmin ? dwcAdminImgsHTML(id, false) : dwcReadImgHTML(it);
+            } else {
+                dwcRender();
+            }
+            dwcUpdateNoImgUI();
+        }
+
+        function dwcOpenImages(id, start = 0) {
+            dwcSelectRow(id);
+            const it = dwcFindItem(id);
+            if (!it) return;
+            const imgs = dwcActiveImgs(id);
+            const urls = [];
+            const names = [];
+            imgs.forEach(f => {
+                const u = dwcImgUrl(f);
+                if (u) { urls.push(u); names.push(f.name || 'Imagen'); }
+            });
+            if (urls.length === 0) {
+                showToast('No se pudieron cargar las imágenes.');
+                return;
+            }
+            imageViewerState = {
+                partId: null,
+                urls,
+                names,
+                index: Math.max(0, Math.min(start, urls.length - 1))
+            };
+            const titleEl = document.getElementById('image-viewer-title');
+            if (titleEl) {
+                const head = it.descripcion || it.codigo || 'Catálogo';
+                titleEl.textContent = it.codigo && it.descripcion ? `${it.descripcion} — ${it.codigo}` : head;
+            }
+            renderImageViewerContent();
+            document.getElementById('image-viewer-modal').classList.remove('hidden');
+        }
+
+        /* ---------- Valores de edición ---------- */
+
+        function dwcFieldVal(it, f) {
+            const el = document.getElementById(`dwc-e-${f}-${it.id}`);
+            if (el) return el.value;
+            const ed = dwcEdits[it.id];
+            if (ed && dwcHasOwn(ed, f)) return ed[f];
+            return it[f] || '';
+        }
+
+        function dwcCurrentValues(it) {
+            const o = {};
+            DWC_TEXT_FIELDS.forEach(f => { o[f] = String(dwcFieldVal(it, f) || '').trim(); });
+            return o;
+        }
+
+        function dwcStashEdits() {
+            if (!isAdmin) return;
+            dwcItems.forEach(it => {
+                const present = DWC_TEXT_FIELDS.some(f => document.getElementById(`dwc-e-${f}-${it.id}`));
+                if (!present) return;
+                const snap = dwcBaseline.get(it.id) || {};
+                const vals = {};
+                let diff = false;
+                DWC_TEXT_FIELDS.forEach(f => {
+                    const el = document.getElementById(`dwc-e-${f}-${it.id}`);
+                    vals[f] = el ? el.value : (it[f] || '');
+                    if (String(vals[f]).trim() !== (snap[f] || '')) diff = true;
+                });
+                if (diff) dwcEdits[it.id] = vals;
+                else delete dwcEdits[it.id];
+            });
+        }
+
+        function dwcIsChanged(it) {
+            if (dwcHasOwn(dwcPendingImgs, it.id)) return true;
+            const snap = dwcBaseline.get(it.id);
+            if (!snap) return true;
+            const cur = dwcCurrentValues(it);
+            return DWC_TEXT_FIELDS.some(f => cur[f] !== snap[f]);
+        }
+
+        function dwcSyncDrafts() {
+            dwcDrafts = dwcDrafts.map(r => {
+                const n = { ...r };
+                DWC_TEXT_FIELDS.forEach(f => {
+                    const el = document.getElementById(`dwc-d-${f}-${r.id}`);
+                    if (el) n[f] = el.value;
+                });
+                return n;
+            });
+        }
+
+        function dwcDraftHasData(r) {
+            return DWC_TEXT_FIELDS.some(f => String(r[f] || '').trim() !== '') || (dwcPendingImgs[r.id] || []).length > 0;
+        }
+
+        function dwcUpdatePending() {
+            const badge = document.getElementById('dwc-pending-badge');
+            if (!badge) return;
+            if (!isAdmin) { badge.classList.add('hidden'); return; }
+            dwcSyncDrafts();
+            const count = dwcItems.filter(dwcIsChanged).length + dwcDrafts.filter(dwcDraftHasData).length;
+            if (count > 0) {
+                badge.textContent = `${count} cambio(s) pendiente(s)`;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        /* ---------- Filtros y agrupación ---------- */
+
+        function dwcGetFiltered() {
+            const terms = [];
+            for (let i = 1; i <= 5; i++) {
+                const el = document.getElementById(`dwc-search-${i}`);
+                const v = el ? el.value.trim() : '';
+                if (v) terms.push(normalizeText(v));
+            }
+            return dwcItems.filter(it => {
+                if (dwcOnlyNoImg && dwcActiveImgs(it.id).length > 0) return false;
+                const hay = it._s || '';
+                return terms.every(t => hay.includes(t));
+            });
+        }
+
+        function dwcCatKey(it) {
+            const raw = String(it.categoria || '').trim();
+            return raw ? normalizeText(raw) : '__sin_categoria__';
+        }
+
+        function dwcGroup(list) {
+            const map = new Map();
+            list.forEach(it => {
+                const key = dwcCatKey(it);
+                if (!map.has(key)) {
+                    map.set(key, {
+                        key,
+                        label: String(it.categoria || '').trim() || 'Sin categoría',
+                        isUncat: key === '__sin_categoria__',
+                        items: []
+                    });
+                }
+                map.get(key).items.push(it);
+            });
+            const groups = Array.from(map.values());
+            groups.sort((a, b) => {
+                if (a.isUncat && !b.isUncat) return 1;
+                if (!a.isUncat && b.isUncat) return -1;
+                return a.label.localeCompare(b.label, 'es', { sensitivity: 'base' });
+            });
+            return groups;
+        }
+
+        function dwcUpdateNoImgUI() {
+            const btn = document.getElementById('dwc-noimg-btn');
+            const cnt = document.getElementById('dwc-noimg-count');
+            const total = dwcItems.filter(it => dwcActiveImgs(it.id).length === 0).length;
+            if (cnt) cnt.textContent = `(${total})`;
+            if (btn) {
+                btn.className = dwcOnlyNoImg
+                    ? 'px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/80 text-xs text-amber-200 font-semibold transition flex items-center gap-1.5'
+                    : 'px-2.5 py-1 rounded bg-[#32373e] hover:bg-[#3c424b] border border-[#464d57] text-xs text-[#e2e6ec] transition flex items-center gap-1.5';
+            }
+        }
+
+        function dwcToggleNoImg() {
+            dwcOnlyNoImg = !dwcOnlyNoImg;
+            dwcRender();
+        }
+
+        function dwcClearSearch() {
+            for (let i = 1; i <= 5; i++) {
+                const el = document.getElementById(`dwc-search-${i}`);
+                if (el) el.value = '';
+            }
+            dwcOnlyNoImg = false;
+            dwcRender();
+        }
+
+        function dwcToggleCategory(key) {
+            if (dwcCollapsed.has(key)) dwcCollapsed.delete(key);
+            else dwcCollapsed.add(key);
+            dwcRender();
+        }
+
+        function dwcToggleAllCategories() {
+            const groups = dwcGroup(dwcGetFiltered());
+            if (groups.length === 0) return;
+            const allCollapsed = groups.every(g => dwcCollapsed.has(g.key));
+            if (allCollapsed) dwcCollapsed.clear();
+            else groups.forEach(g => dwcCollapsed.add(g.key));
+            dwcRender();
+        }
+
+        function dwcSelectRow(id) {
+            if (dwcSelectedId === id) return;
+            const prev = dwcSelectedId;
+            dwcSelectedId = id;
+            if (prev) {
+                const prevRow = document.querySelector(`tr[data-dwc-id="${prev}"]`);
+                if (prevRow) prevRow.classList.remove('row-selected');
+            }
+            const row = document.querySelector(`tr[data-dwc-id="${id}"]`);
+            if (row) row.classList.add('row-selected');
+        }
+
+        /* ---------- Render: celdas ---------- */
+
+        function dwcReadImgHTML(it) {
+            const imgs = dwcActiveImgs(it.id);
+            if (imgs.length === 0) return DWC_DASH;
+            const u = dwcImgUrl(imgs[0]);
+            const extra = imgs.length > 1
+                ? `<span class="font-mono text-[11px] font-semibold text-emerald-200">+${imgs.length - 1}</span>`
+                : '<i class="fa-solid fa-magnifying-glass-plus text-[10px] text-emerald-300"></i>';
+            return `
+                <button
+                    type="button"
+                    onclick="event.stopPropagation(); dwcOpenImages('${it.id}', 0)"
+                    title="Ver imagen${imgs.length > 1 ? `es (${imgs.length})` : ''}"
+                    class="inline-flex items-center gap-1.5 p-0.5 pr-1.5 rounded bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/60 hover:border-emerald-300 transition cursor-pointer"
+                >
+                    ${u
+                        ? `<img src="${u}" alt="${escapeHTML(imgs[0].name || 'Foto')}" loading="lazy" class="w-10 h-10 rounded object-cover">`
+                        : '<span class="w-10 h-10 rounded bg-emerald-500/20 flex items-center justify-center text-emerald-300 text-xs"><i class="fa-solid fa-image"></i></span>'}
+                    ${extra}
+                </button>
+            `;
+        }
+
+        function dwcRutaHTML(it) {
+            const ruta = String(it.ruta || '').trim();
+            if (!ruta) return DWC_DASH;
+            const isUrl = /^https?:\/\//i.test(ruta);
+            const textHTML = isUrl
+                ? `<a href="${escapeHTML(ruta)}" target="_blank" rel="noopener noreferrer" onclick="event.stopPropagation()" title="${escapeHTML(ruta)}" class="font-mono text-[11px] text-[#69c3fa] hover:underline truncate">${escapeHTML(ruta)}</a>`
+                : `<span title="${escapeHTML(ruta)}" class="font-mono text-[11px] text-[#cfd5de] truncate">${escapeHTML(ruta)}</span>`;
+            return `
+                <div class="flex items-center gap-1.5 max-w-[280px]">
+                    ${textHTML}
+                    <button
+                        type="button"
+                        onclick="event.stopPropagation(); dwcCopyRuta('${it.id}')"
+                        title="Copiar ruta"
+                        class="w-6 h-6 shrink-0 rounded bg-[#1e2227] hover:bg-[#32373e] border border-[#3e454e] hover:border-[#1da1f2] text-[#1da1f2] flex items-center justify-center transition"
+                    >
+                        <i class="fa-regular fa-copy text-[10px]"></i>
+                    </button>
+                </div>
+            `;
+        }
+
+        async function dwcCopyRuta(id) {
+            const it = dwcFindItem(id);
+            const text = it ? String(it.ruta || '').trim() : '';
+            if (!text) return;
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast('Ruta copiada al portapapeles.');
+            } catch (_) {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.opacity = '0';
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                    showToast('Ruta copiada al portapapeles.');
+                } catch (__) {
+                    showToast('No se pudo copiar la ruta.');
+                }
+                ta.remove();
+            }
+        }
+
+        function dwcAdminImgsHTML(id, isDraft) {
+            const imgs = isDraft ? (dwcPendingImgs[id] || []) : dwcActiveImgs(id);
+            const chips = imgs.map((f, idx) => {
+                const u = dwcImgUrl(f);
+                const ring = f._isNew ? 'ring-1 ring-amber-400/80' : '';
+                return `
+                    <span title="${escapeHTML(f.name)}" class="relative inline-flex items-center gap-1 pl-1 pr-5 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/60 text-emerald-200 ${ring} font-mono text-[11px] max-w-[130px]">
+                        ${u ? `<img src="${u}" alt="" class="w-5 h-5 rounded object-cover shrink-0">` : '<i class="fa-solid fa-image text-[10px] shrink-0"></i>'}
+                        <span class="truncate">${escapeHTML(f.name)}</span>
+                        <button type="button" onclick="event.stopPropagation(); dwcRemoveImg('${id}', ${idx}, ${isDraft})" title="Quitar imagen" class="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-600 hover:bg-red-500 text-white text-[9px] flex items-center justify-center shadow">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </span>
+                `;
+            }).join('');
+            return `
+                <div class="flex items-center justify-between gap-2 min-w-[150px]">
+                    <div class="flex flex-wrap items-center gap-1.5 py-0.5 min-w-0">
+                        ${chips || '<span class="text-[11px] text-[#6d7682] font-mono">Sin imagen</span>'}
+                    </div>
+                    <label
+                        onclick="event.stopPropagation()"
+                        title="Subir imágenes"
+                        class="cursor-pointer w-7 h-7 rounded bg-[#1e2227] hover:bg-[#32373e] border border-[#3e454e] hover:border-[#1da1f2] text-[#1da1f2] flex items-center justify-center shrink-0 transition"
+                    >
+                        <i class="fa-solid fa-plus text-xs"></i>
+                        <input type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp" multiple class="hidden" onchange="dwcOnImgsSelected('${id}', event, ${isDraft})">
+                    </label>
+                </div>
+            `;
+        }
+
+        function dwcReadRowHTML(it) {
+            return `
+                <td class="py-2.5 px-3 text-[#e2e6ec] font-medium align-top min-w-[180px]">${escapeHTML(it.descripcion) || DWC_DASH}</td>
+                <td class="py-2.5 px-3 whitespace-nowrap text-[#cfd5de] align-top">${escapeHTML(it.categoria) || DWC_DASH}</td>
+                <td class="py-2.5 px-3 text-[#cfd5de] align-top">
+                    ${it.ubicacion
+                        ? `<span class="inline-flex items-center gap-1.5"><i class="fa-solid fa-location-dot text-amber-400 text-[10px]"></i>${escapeHTML(it.ubicacion)}</span>`
+                        : DWC_DASH}
+                </td>
+                <td class="py-2.5 px-3 text-center align-top">
+                    <div class="dwc-img-slot flex justify-center">${dwcReadImgHTML(it)}</div>
+                </td>
+                <td class="py-2.5 px-3 whitespace-nowrap font-mono text-xs font-semibold text-[#1da1f2] align-top">${escapeHTML(it.codigo) || DWC_DASH}</td>
+                <td class="py-2.5 px-3 max-w-xs text-[#aeb6c2] align-top">${escapeHTML(it.notas) || DWC_DASH}</td>
+                <td class="py-2.5 px-3 align-top">${dwcRutaHTML(it)}</td>
+            `;
+        }
+
+        function dwcAdminRowHTML(it) {
+            const snap = dwcBaseline.get(it.id) || {};
+            const inp = (f, cls, minW) => {
+                const v = dwcFieldVal(it, f);
+                const changed = String(v).trim() !== (snap[f] || '') ? 'cell-changed' : '';
+                return `
+                    <td class="py-2 px-2.5 ${minW}">
+                        <input type="text" id="dwc-e-${f}-${it.id}" value="${escapeHTML(v)}" placeholder="${DWC_LABELS[f]}" class="inline-cell-input ${cls} ${changed}">
+                    </td>
+                `;
+            };
+            return `
+                ${inp('descripcion', '', 'min-w-[180px]')}
+                ${inp('categoria', '', 'min-w-[120px]')}
+                ${inp('ubicacion', '', 'min-w-[110px]')}
+                <td class="py-2 px-2.5">
+                    <div class="dwc-img-slot">${dwcAdminImgsHTML(it.id, false)}</div>
+                </td>
+                ${inp('codigo', 'font-mono text-[#1da1f2]', 'min-w-[110px]')}
+                ${inp('notas', 'text-[#aeb6c2]', 'min-w-[150px]')}
+                ${inp('ruta', 'font-mono', 'min-w-[170px]')}
+                <td class="py-2 px-2.5 whitespace-nowrap text-right">
+                    <button onclick="event.stopPropagation(); dwcConfirmDelete('${it.id}')" title="Eliminar ítem del catálogo" class="px-2 py-1 rounded bg-[#1e2227] hover:bg-red-950/60 text-[#aeb6c2] hover:text-red-400 text-xs transition">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            `;
+        }
+
+        /* ---------- Render: tabla ---------- */
+
+        function dwcRender() {
+            const tbody = document.getElementById('dwc-tbody');
+            const empty = document.getElementById('dwc-empty');
+            if (!tbody || !empty) return;
+
+            dwcStashEdits();
+            document.getElementById('dwc-admin-th').classList.toggle('hidden', !isAdmin);
+            dwcUpdateNoImgUI();
+
+            const list = dwcGetFiltered();
+            document.getElementById('dwc-count').textContent = list.length;
+
+            if (list.length === 0) {
+                tbody.innerHTML = '';
+                const t = document.getElementById('dwc-empty-title');
+                const s = document.getElementById('dwc-empty-sub');
+                if (!dwcLoaded) {
+                    t.textContent = 'Cargando catálogo...';
+                    s.textContent = 'Conectando con la base de datos.';
+                } else if (dwcItems.length === 0) {
+                    t.textContent = 'El catálogo está vacío';
+                    s.textContent = isAdmin
+                        ? 'Cargá ítems desde el panel de carga rápida o importando un Excel.'
+                        : 'Ingresá como Admin para cargar los primeros ítems.';
+                } else {
+                    t.textContent = 'No se encontraron ítems coincidentes';
+                    s.textContent = 'Ningún registro cumple simultáneamente con todos los filtros ingresados.';
+                }
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+
+            const groups = dwcGroup(list);
+            const colSpan = isAdmin ? 8 : 7;
+            const frag = document.createDocumentFragment();
+
+            groups.forEach(g => {
+                const isCollapsed = dwcCollapsed.has(g.key);
+                const gr = document.createElement('tr');
+                gr.className = 'group-header-row cursor-pointer select-none';
+                gr.addEventListener('click', () => dwcToggleCategory(g.key));
+                gr.innerHTML = `
+                    <td colspan="${colSpan}" class="py-2 px-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <i class="fa-solid ${isCollapsed ? 'fa-chevron-right' : 'fa-chevron-down'} text-[10px] text-[#1da1f2] w-3"></i>
+                                <span class="font-semibold text-xs uppercase tracking-wide ${g.isUncat ? 'text-[#9aa2ad]' : 'text-[#e6eaef]'}">${escapeHTML(g.label)}</span>
+                            </div>
+                            <span class="px-2 py-0.5 rounded bg-[#181c20] border border-[#343a42] font-mono text-[10px] text-[#1da1f2]">${g.items.length}</span>
+                        </div>
+                    </td>
+                `;
+                frag.appendChild(gr);
+                if (isCollapsed) return;
+
+                g.items.forEach(it => {
+                    const tr = document.createElement('tr');
+                    tr.dataset.dwcId = it.id;
+                    tr.dataset.dwcLabel = it.descripcion || it.codigo || it.id;
+                    tr.className = `hover:bg-[#2d3238] transition-colors cursor-pointer ${dwcSelectedId === it.id ? 'row-selected' : ''}`;
+                    tr.addEventListener('click', () => dwcSelectRow(it.id));
+                    tr.innerHTML = isAdmin ? dwcAdminRowHTML(it) : dwcReadRowHTML(it);
+                    frag.appendChild(tr);
+                });
+            });
+
+            tbody.innerHTML = '';
+            tbody.appendChild(frag);
+        }
+
+        /* ---------- Render: filas de carga rápida ---------- */
+
+        function dwcRenderDrafts() {
+            const c = document.getElementById('dwc-drafts');
+            if (!c) return;
+            const inp = (r, f, idx, cls = '') => `
+                <input type="text" id="dwc-d-${f}-${r.id}" value="${escapeHTML(r[f] || '')}"
+                    placeholder="${DWC_LABELS[f]}${f === 'descripcion' ? ' #' + (idx + 1) : ''}"
+                    oninput="dwcUpdatePending()" class="inline-cell-input ${cls}">
+            `;
+            c.innerHTML = dwcDrafts.map((r, idx) => `
+                <div data-dwc-draft-id="${r.id}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-2 items-center bg-[#1e2227] border border-[#353b42] rounded p-2">
+                    <div class="lg:col-span-2">${inp(r, 'descripcion', idx)}</div>
+                    <div class="lg:col-span-1">${inp(r, 'categoria', idx)}</div>
+                    <div class="lg:col-span-1">${inp(r, 'ubicacion', idx)}</div>
+                    <div class="lg:col-span-2">${dwcAdminImgsHTML(r.id, true)}</div>
+                    <div class="lg:col-span-1">${inp(r, 'codigo', idx, 'font-mono text-[#1da1f2]')}</div>
+                    <div class="lg:col-span-2">${inp(r, 'notas', idx, 'text-[#aeb6c2]')}</div>
+                    <div class="lg:col-span-2">${inp(r, 'ruta', idx, 'font-mono')}</div>
+                    <div class="lg:col-span-1 flex justify-end">
+                        <button type="button" onclick="dwcRemoveDraft('${r.id}')" title="Quitar fila" class="w-7 h-7 rounded bg-[#272b30] hover:bg-red-950/60 border border-[#3e454e] text-[#9aa2ad] hover:text-red-400 text-xs flex items-center justify-center transition">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function dwcAddDraft(prefill = {}) {
+            dwcSyncDrafts();
+            const d = { ...dwcEmptyDraft(), ...prefill };
+            d.id = dwcNewId('dwcdraft');
+            dwcDrafts.push(d);
+            dwcRenderDrafts();
+            dwcUpdatePending();
+        }
+
+        function dwcRemoveDraft(id) {
+            dwcSyncDrafts();
+            dwcDrafts = dwcDrafts.filter(r => r.id !== id);
+            delete dwcPendingImgs[id];
+            if (dwcDrafts.length === 0) dwcDrafts.push(dwcEmptyDraft());
+            dwcRenderDrafts();
+            dwcUpdatePending();
+        }
+
+        function dwcKnownCodes() {
+            const keys = new Set();
+            dwcItems.forEach(it => {
+                const k = normalizeCodeKey(dwcFieldVal(it, 'codigo'));
+                if (k) keys.add(k);
+            });
+            dwcDrafts.forEach(r => {
+                const k = normalizeCodeKey(r.codigo);
+                if (k) keys.add(k);
+            });
+            return keys;
+        }
+
+        /* ---------- Importar Excel ---------- */
+
+        async function dwcHandleExcel(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file || !window.XLSX) return;
+            try {
+                const buf = await file.arrayBuffer();
+                const wb = XLSX.read(buf, { type: 'array' });
+                const sheet = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+                if (!rows || rows.length === 0) {
+                    showToast('El archivo Excel está vacío.');
+                    event.target.value = '';
+                    return;
+                }
+
+                dwcSyncDrafts();
+                const head = (rows[0] || []).map(c => normalizeText(String(c || '').trim()));
+                const find = names => head.findIndex(h => names.includes(h));
+                let idx = {
+                    descripcion: find(['descripcion', 'description', 'desc']),
+                    categoria: find(['categoria', 'category', 'cat']),
+                    ubicacion: find(['ubicacion', 'ubic', 'location', 'lugar', 'deposito']),
+                    codigo: find(['codigo', 'code', 'cod']),
+                    notas: find(['notas', 'nota', 'notes', 'observaciones', 'observacion']),
+                    ruta: find(['ruta', 'path', 'link', 'url', 'enlace'])
+                };
+                const hasHeader = Object.values(idx).some(v => v !== -1);
+                // Sin encabezado: DESCRIPCIÓN, CATEGORÍA, UBICACIÓN, IMAGEN, CÓDIGO, NOTAS, RUTA
+                if (!hasHeader) idx = { descripcion: 0, categoria: 1, ubicacion: 2, codigo: 4, notas: 5, ruta: 6 };
+                const start = hasHeader ? 1 : 0;
+
+                dwcDrafts = dwcDrafts.filter(dwcDraftHasData);
+                const known = dwcKnownCodes();
+                let added = 0, skipped = 0;
+
+                for (let i = start; i < rows.length; i++) {
+                    const r = rows[i];
+                    if (!Array.isArray(r)) continue;
+                    const vals = {};
+                    DWC_TEXT_FIELDS.forEach(f => {
+                        vals[f] = idx[f] >= 0 ? String(r[idx[f]] ?? '').trim() : '';
+                    });
+                    if (!DWC_TEXT_FIELDS.some(f => vals[f])) continue;
+                    const k = normalizeCodeKey(vals.codigo);
+                    if (k && known.has(k)) { skipped++; continue; }
+                    if (k) known.add(k);
+                    dwcDrafts.push({ ...vals, id: dwcNewId('dwcdraft') });
+                    added++;
+                }
+
+                if (dwcDrafts.length === 0) dwcDrafts.push(dwcEmptyDraft());
+                dwcRenderDrafts();
+                dwcUpdatePending();
+                showToast(skipped > 0
+                    ? `Catálogo: ${added} fila(s) agregada(s); ${skipped} duplicado(s) omitido(s) por código.`
+                    : `Catálogo: se cargaron ${added} fila(s). Pulsá Guardar para confirmar.`);
+            } catch (err) {
+                showToast('Error al leer Excel: ' + err.message);
+            }
+            event.target.value = '';
+        }
+
+        /* ---------- Guardar / eliminar ---------- */
+
+        async function dwcPersist(item, prevImgs, targetImgs) {
+            const now = new Date().toISOString().split('T')[0];
+            let finalImgs = [];
+
+            if (dwcMode === 'supabase') {
+                const keep = new Set(targetImgs.filter(f => f.path && !f._isNew).map(f => f.path));
+                const toRemove = (prevImgs || []).filter(f => f.path && !keep.has(f.path)).map(f => f.path);
+
+                for (let i = 0; i < targetImgs.length; i++) {
+                    const f = targetImgs[i];
+                    if (f.path && !f._isNew) { finalImgs.push(f); continue; }
+                    if (!f.data) continue;
+                    const clean = String(f.name || 'imagen').replace(/[^a-zA-Z0-9._-]/g, '_');
+                    const path = `${DWC_STORAGE_PREFIX}/${item.id}/${Date.now()}_${i}_${clean}`;
+                    const type = f.type || getImageMimeType(f.name);
+                    const { error } = await dwcClient.storage.from(DWC_BUCKET).upload(path, new Blob([f.data], { type }), {
+                        upsert: true,
+                        contentType: type
+                    });
+                    if (error) throw new Error('Storage: ' + error.message);
+                    finalImgs.push({ name: f.name, size: f.data.byteLength, type, path, data: f.data });
+                }
+
+                const { error: dbErr } = await dwcClient.from(DWC_TABLE).upsert({
+                    id: item.id,
+                    descripcion: item.descripcion,
+                    categoria: item.categoria,
+                    ubicacion: item.ubicacion,
+                    codigo: item.codigo,
+                    notas: item.notas,
+                    ruta: item.ruta,
+                    imagenes: finalImgs.map(f => ({ name: f.name, size: f.size, path: f.path })),
+                    updated_at: now
+                });
+                if (dbErr) throw new Error('Base de datos: ' + dbErr.message);
+
+                if (toRemove.length > 0) {
+                    await dwcClient.storage.from(DWC_BUCKET).remove(toRemove).catch(() => {});
+                }
+            } else {
+                finalImgs = targetImgs.filter(f => f.data).map(f => ({
+                    name: f.name,
+                    size: f.size || f.data.byteLength,
+                    type: f.type || getImageMimeType(f.name),
+                    path: null,
+                    data: f.data
+                }));
+                await dwcIdbPut({
+                    id: item.id,
+                    descripcion: item.descripcion,
+                    categoria: item.categoria,
+                    ubicacion: item.ubicacion,
+                    codigo: item.codigo,
+                    notas: item.notas,
+                    ruta: item.ruta,
+                    imagenes: finalImgs,
+                    updated_at: now
+                });
+            }
+
+            const saved = {
+                id: item.id,
+                descripcion: item.descripcion,
+                categoria: item.categoria,
+                ubicacion: item.ubicacion,
+                codigo: item.codigo,
+                notas: item.notas,
+                ruta: item.ruta,
+                imagenes: finalImgs,
+                updated_at: now
+            };
+            dwcBuildIndex(saved);
+            return saved;
+        }
+
+        async function dwcSaveAll() {
+            if (!isAdmin) return;
+            if (!dwcLoaded || dwcMode === 'connecting') {
+                showToast('El catálogo todavía se está cargando.');
+                return;
+            }
+            if (dwcSaving) return;
+            dwcSaving = true;
+
+            try {
+                dwcStashEdits();
+                dwcSyncDrafts();
+
+                let skipped = 0;
+                const jobs = [];
+
+                const codeById = new Map();
+                dwcItems.forEach(it => {
+                    const k = normalizeCodeKey(dwcFieldVal(it, 'codigo'));
+                    if (k) codeById.set(it.id, k);
+                });
+
+                for (const it of dwcItems) {
+                    if (!dwcIsChanged(it)) continue;
+                    const vals = dwcCurrentValues(it);
+                    const k = normalizeCodeKey(vals.codigo);
+                    const dup = k && Array.from(codeById.entries()).some(([oid, ok]) => oid !== it.id && ok === k);
+                    if (dup) { skipped++; continue; }
+                    jobs.push({
+                        kind: 'upd',
+                        item: { ...it, ...vals },
+                        prevImgs: it.imagenes || [],
+                        targetImgs: dwcHasOwn(dwcPendingImgs, it.id) ? (dwcPendingImgs[it.id] || []) : (it.imagenes || [])
+                    });
+                }
+
+                const activeCodes = new Set(codeById.values());
+                const remaining = [];
+                for (const r of dwcDrafts) {
+                    if (!dwcDraftHasData(r)) { remaining.push(r); continue; }
+                    const vals = {};
+                    DWC_TEXT_FIELDS.forEach(f => { vals[f] = String(r[f] || '').trim(); });
+                    const k = normalizeCodeKey(vals.codigo);
+                    if (k && activeCodes.has(k)) { skipped++; remaining.push(r); continue; }
+                    if (k) activeCodes.add(k);
+                    jobs.push({
+                        kind: 'new',
+                        draft: r,
+                        item: { id: dwcNewId('cat'), ...vals, imagenes: [] },
+                        prevImgs: [],
+                        targetImgs: dwcPendingImgs[r.id] || []
+                    });
+                }
+
+                let ok = 0;
+                const errors = [];
+                for (const j of jobs) {
+                    try {
+                        const saved = await dwcPersist(j.item, j.prevImgs, j.targetImgs);
+                        if (j.kind === 'upd') {
+                            const i = dwcItems.findIndex(x => x.id === saved.id);
+                            if (i !== -1) dwcItems[i] = saved;
+                            delete dwcPendingImgs[saved.id];
+                            delete dwcEdits[saved.id];
+                        } else {
+                            dwcItems.push(saved);
+                            delete dwcPendingImgs[j.draft.id];
+                        }
+                        dwcBaseline.set(saved.id, dwcSnap(saved));
+                        ok++;
+                    } catch (err) {
+                        errors.push(err.message);
+                        if (j.kind === 'new') remaining.push(j.draft);
+                    }
+                }
+
+                dwcSortItems();
+                dwcDrafts = remaining.length > 0 ? remaining : [dwcEmptyDraft()];
+
+                // Re-render sin arrastrar los valores viejos de los inputs ya guardados
+                document.getElementById('dwc-tbody').innerHTML = '';
+                dwcRenderDrafts();
+                dwcRender();
+                dwcUpdatePending();
+
+                if (ok > 0) showSavedPopup();
+                if (skipped > 0) showToast(`Catálogo: ${skipped} ítem(s) no guardado(s) por código duplicado.`);
+                if (errors.length > 0) showToast('Error al guardar catálogo: ' + errors[0]);
+                if (ok === 0 && skipped === 0 && errors.length === 0) showToast('No hay cambios pendientes en el catálogo.');
+            } catch (err) {
+                showToast('Error al guardar catálogo: ' + err.message);
+            } finally {
+                dwcSaving = false;
+            }
+        }
+
+        function dwcConfirmDelete(id) {
+            if (!isAdmin) return;
+            const it = dwcFindItem(id);
+            if (!it) return;
+            const label = it.descripcion || it.codigo || 'ítem';
+            openConfirmModal('Eliminar Ítem del Catálogo', `¿Eliminar completamente "${label}" y sus imágenes?`, async () => {
+                try {
+                    if (dwcMode === 'supabase') {
+                        const paths = (it.imagenes || []).map(f => f.path).filter(Boolean);
+                        if (paths.length > 0) await dwcClient.storage.from(DWC_BUCKET).remove(paths);
+                        const { error } = await dwcClient.from(DWC_TABLE).delete().eq('id', id);
+                        if (error) throw new Error(error.message);
+                    } else {
+                        await dwcIdbDelete(id);
+                    }
+                    dwcStashEdits();
+                    dwcItems = dwcItems.filter(x => x.id !== id);
+                    dwcBaseline.delete(id);
+                    delete dwcPendingImgs[id];
+                    delete dwcEdits[id];
+                    if (dwcSelectedId === id) dwcSelectedId = null;
+                    dwcRender();
+                    dwcUpdatePending();
+                    showToast('Eliminado del catálogo.');
+                } catch (err) {
+                    showToast('Error al eliminar: ' + err.message);
+                }
+            });
+        }
+
+        /* ---------- Arrastrar y soltar imágenes (sólo en Catálogo) ---------- */
+
+        function dwcHasFiles(e) {
+            return Boolean(e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files'));
+        }
+
+        async function dwcDropAsDrafts(files) {
+            const imgs = await dwcReadImageFiles(files);
+            if (imgs.length === 0) return;
+            dwcSyncDrafts();
+            dwcDrafts = dwcDrafts.filter(dwcDraftHasData);
+            imgs.forEach(img => {
+                const d = { ...dwcEmptyDraft(), descripcion: img.name.replace(/\.[^/.]+$/, '') };
+                dwcDrafts.push(d);
+                dwcPendingImgs[d.id] = [img];
+            });
+            dwcRenderDrafts();
+            dwcUpdatePending();
+            showToast(`${imgs.length} ítem(s) nuevo(s) creados en carga rápida. Completá los datos y pulsá Guardar.`);
+        }
+
+        function dwcInstallDragGuards() {
+            // Listeners en fase de captura: cuando el Catálogo está activo, el evento
+            // se detiene aquí y nunca llega a los handlers de Ferretería.
+            const banner = document.getElementById('page-drop-banner');
+            const label = document.getElementById('page-drop-target-label');
+            const clearMarks = () => {
+                document.querySelectorAll('tr[data-dwc-id], [data-dwc-draft-id]').forEach(r => r.classList.remove('row-drop-active'));
+            };
+
+            document.addEventListener('dragenter', e => {
+                if (activeModule !== 'catalogo') return;
+                e.stopPropagation();
+                if (!dwcHasFiles(e)) return;
+                e.preventDefault();
+                if (!isAdmin) return;
+                dwcDragCounter++;
+                banner.classList.remove('hidden');
+            }, true);
+
+            document.addEventListener('dragover', e => {
+                if (activeModule !== 'catalogo') return;
+                e.stopPropagation();
+                if (!dwcHasFiles(e)) return;
+                e.preventDefault();
+                if (!isAdmin) { e.dataTransfer.dropEffect = 'none'; return; }
+                clearMarks();
+                const row = e.target.closest && e.target.closest('tr[data-dwc-id]');
+                const draft = e.target.closest && e.target.closest('[data-dwc-draft-id]');
+                if (row) {
+                    row.classList.add('row-drop-active');
+                    label.textContent = `Soltar imágenes en: ${row.dataset.dwcLabel}`;
+                } else if (draft) {
+                    draft.classList.add('row-drop-active');
+                    label.textContent = 'Soltar imágenes en esta fila de carga rápida';
+                } else {
+                    label.textContent = 'Suelta sobre una fila o aquí para crear ítems nuevos con las imágenes';
+                }
+            }, true);
+
+            document.addEventListener('dragleave', e => {
+                if (activeModule !== 'catalogo') return;
+                e.stopPropagation();
+                if (!isAdmin) return;
+                dwcDragCounter--;
+                if (dwcDragCounter <= 0) {
+                    dwcDragCounter = 0;
+                    banner.classList.add('hidden');
+                    clearMarks();
+                }
+            }, true);
+
+            document.addEventListener('drop', async e => {
+                if (activeModule !== 'catalogo') return;
+                e.stopPropagation();
+                if (!dwcHasFiles(e)) return;
+                e.preventDefault();
+                dwcDragCounter = 0;
+                banner.classList.add('hidden');
+                const row = e.target.closest && e.target.closest('tr[data-dwc-id]');
+                const draft = e.target.closest && e.target.closest('[data-dwc-draft-id]');
+                clearMarks();
+                if (!isAdmin) return;
+                const files = Array.from(e.dataTransfer.files || []);
+                if (files.length === 0) return;
+                if (row) await dwcAddImages(row.dataset.dwcId, files, false);
+                else if (draft) await dwcAddImages(draft.dataset.dwcDraftId, files, true);
+                else await dwcDropAsDrafts(files);
+            }, true);
+        }
+
+        /* ---------- Cambio de módulo ---------- */
+
+        function dwcSetModule(mod, opts = {}) {
+            activeModule = mod === 'catalogo' ? 'catalogo' : 'ferreteria';
+            const isCat = activeModule === 'catalogo';
+
+            const ferrMain = document.querySelector('main:not(#catalogo-module)');
+            const catMain = document.getElementById('catalogo-module');
+            if (ferrMain) ferrMain.classList.toggle('hidden', isCat);
+            if (catMain) catMain.classList.toggle('hidden', !isCat);
+
+            const h1 = document.querySelector('header h1');
+            if (h1) h1.textContent = isCat ? DWC_CAT_TITLE : DWC_FERR_TITLE;
+            document.title = isCat ? DWC_CAT_TITLE : DWC_FERR_TITLE;
+
+            // El respaldo JSON del encabezado pertenece a Ferretería: se oculta en Catálogo
+            const jsonGroup = document.querySelector('#admin-toolbar-actions > .relative.group');
+            if (jsonGroup) jsonGroup.classList.toggle('hidden', isCat);
+
+            // El menú lateral muestra siempre el OTRO módulo
+            const lbl = document.getElementById('module-switch-label');
+            const sub = document.getElementById('module-switch-sub');
+            const ico = document.getElementById('module-switch-icon');
+            if (lbl) lbl.textContent = isCat ? 'Ferretería' : 'Catálogo Datawaves';
+            if (sub) sub.textContent = isCat ? 'Componentes CAD (.iam / .ipt / .stl)' : 'Descripción • Ubicación • Imagen • Ruta';
+            if (ico) {
+                ico.className = isCat
+                    ? 'w-8 h-8 rounded bg-[#1da1f2]/15 border border-[#1da1f2]/50 text-[#1da1f2] flex items-center justify-center shrink-0'
+                    : 'w-8 h-8 rounded bg-emerald-500/15 border border-emerald-400/50 text-emerald-300 flex items-center justify-center shrink-0';
+                ico.innerHTML = isCat ? '<i class="fa-solid fa-screwdriver-wrench text-xs"></i>' : '<i class="fa-solid fa-book-open text-xs"></i>';
+            }
+
+            if (isCat) {
+                dwcApplyAuth();
+            }
+
+            try { localStorage.setItem(DWC_MODULE_KEY, activeModule); } catch (_) {}
+            if (!opts.silent) window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function dwcToggleModule() {
+            dwcSetModule(activeModule === 'catalogo' ? 'ferreteria' : 'catalogo');
+            if (typeof closeAiSidebar === 'function') closeAiSidebar();
+        }
+
+        function dwcApplyAuth() {
+            const panel = document.getElementById('dwc-admin-panel');
+            if (panel) panel.classList.toggle('hidden', !isAdmin);
+            if (isAdmin) {
+                if (dwcDrafts.length === 0) dwcDrafts.push(dwcEmptyDraft());
+                dwcRenderDrafts();
+            }
+            dwcRender();
+            dwcUpdatePending();
+        }
+
+        /* ---------- Enganches no invasivos con el encabezado compartido ---------- */
+        (function () {
+            // Al entrar/salir de Admin, también se actualiza el Catálogo.
+            const ferrUpdateAuthUI = window.updateAuthUI;
+            window.updateAuthUI = function () {
+                ferrUpdateAuthUI.apply(this, arguments);
+                dwcApplyAuth();
+            };
+
+            // El botón "Guardar" del encabezado guarda el módulo que esté activo.
+            const ferrSaveAll = window.saveAllProgress;
+            window.saveAllProgress = function () {
+                if (activeModule === 'catalogo') return dwcSaveAll();
+                return ferrSaveAll.apply(this, arguments);
+            };
+        })();
+
+        /* ---------- Inicialización ---------- */
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            dwcInstallDragGuards();
+
+            document.querySelectorAll('.dwc-search-input').forEach(inp => {
+                inp.addEventListener('input', () => {
+                    clearTimeout(dwcFilterTimer);
+                    dwcFilterTimer = setTimeout(dwcRender, 120);
+                });
+            });
+
+            document.getElementById('dwc-tbody').addEventListener('input', e => {
+                const el = e.target;
+                if (!el || !el.matches('input.inline-cell-input')) return;
+                const m = el.id.match(/^dwc-e-([a-z]+)-(.+)$/);
+                if (!m) return;
+                const snap = dwcBaseline.get(m[2]);
+                if (snap) el.classList.toggle('cell-changed', el.value.trim() !== (snap[m[1]] || ''));
+                dwcUpdatePending();
+            });
+
+            dwcDrafts = [dwcEmptyDraft()];
+
+            let saved = 'ferreteria';
+            try { saved = localStorage.getItem(DWC_MODULE_KEY) || 'ferreteria'; } catch (_) {}
+            dwcSetModule(saved, { silent: true });
+
+            try { await dwcOpenIdb(); } catch (err) { console.warn('[Catálogo] IndexedDB:', err); }
+
+            if (window.supabase && DEFAULT_SUPABASE_URL && DEFAULT_SUPABASE_ANON_KEY) {
+                try {
+                    dwcClient = window.supabase.createClient(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_ANON_KEY, {
+                        auth: { persistSession: false, autoRefreshToken: false, storageKey: 'dw-catalogo-auth' }
+                    });
+                } catch (_) {
+                    dwcClient = null;
+                }
+            }
+
+            try {
+                await dwcLoadItems();
+            } catch (err) {
+                dwcMode = 'local';
+                dwcLoaded = true;
+                dwcUpdateModeBadge();
+                showToast('Catálogo: error al cargar datos: ' + err.message);
+            }
+            dwcRender();
         });
     </script>
 </body>
